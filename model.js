@@ -242,6 +242,11 @@
             // prevent this thing from adding/removing properties
             Object.preventExtensions(this);
             Object.seal(this);
+
+            // freeze attributes used to define object
+            Object.freeze(this.session);
+            Object.freeze(this.derived);
+            Object.freeze(this.props);
         },
         // just makes friendlier errors when trying to define a new model
         // only used when setting up original property definitions
@@ -316,7 +321,7 @@
             });
 
             this.defineGetter('json', function () {
-                return JSON.stringify(this.attributes);
+                return JSON.stringify(this._getAttributes(false, true));
             });
 
             this.defineGetter('derived', function () {
@@ -330,15 +335,15 @@
             });
         },
 
-        _getAttributes: function (includeSession) {
+        _getAttributes: function (includeSession, raw) {
             var res = {};
             for (var item in this.definition) {
                 if (!includeSession) {
                     if (!this.definition[item].session) {
-                        res[item] = this[item];
+                        res[item] = (raw) ? this.definition[item].value : this[item];
                     }
                 } else {
-                    res[item] = this[item];
+                    res[item] = (raw) ? this.definition[item].value : this[item];
                 }
             }
             return res;
