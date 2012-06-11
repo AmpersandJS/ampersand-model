@@ -120,7 +120,7 @@
         off: function (events, callback, context) {
             var ev, calls, node;
             if (!events) {
-                delete this._callbacks;
+                this._callbacks = {};
             } else if (calls = this._callbacks) {
                 events = events.split(/\s+/);
                 while (ev = events.shift()) {
