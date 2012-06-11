@@ -1,5 +1,4 @@
-var _ = require('underscore'),
-    Shave = {};
+var Shave = {};
 
 // HELPERS
 // Shared empty constructor function to aid in prototype-chain creation.
@@ -50,26 +49,107 @@ var extend = function (protoProps, classProps) {
     return child;
 };
 
+Shave.Events = {
+
+    // Bind an event, specified by a string name, `ev`, to a `callback`
+    // function. Passing `"all"` will bind the callback to all events fired.
+    on: function(events, callback, context) {
+      var ev;
+      events = events.split(/\s+/);
+      var calls = this._callbacks || (this._callbacks = {});
+      while (ev = events.shift()) {
+        // Create an immutable callback list, allowing traversal during
+        // modification.  The tail is an empty object that will always be used
+        // as the next node.
+        var list  = calls[ev] || (calls[ev] = {});
+        var tail = list.tail || (list.tail = list.next = {});
+        tail.callback = callback;
+        tail.context = context;
+        list.tail = tail.next = {};
+      }
+      return this;
+    },
+
+    // Remove one or many callbacks. If `context` is null, removes all callbacks
+    // with that function. If `callback` is null, removes all callbacks for the
+    // event. If `ev` is null, removes all bound callbacks for all events.
+    off: function(events, callback, context) {
+      var ev, calls, node;
+      if (!events) {
+        delete this._callbacks;
+      } else if (calls = this._callbacks) {
+        events = events.split(/\s+/);
+        while (ev = events.shift()) {
+          node = calls[ev];
+          delete calls[ev];
+          if (!callback || !node) continue;
+          // Create a new list, omitting the indicated event/context pairs.
+          while ((node = node.next) && node.next) {
+            if (node.callback === callback &&
+              (!context || node.context === context)) continue;
+            this.on(ev, node.callback, node.context);
+          }
+        }
+      }
+      return this;
+    },
+
+    // Trigger an event, firing all bound callbacks. Callbacks are passed the
+    // same arguments as `trigger` is, apart from the event name.
+    // Listening for `"all"` passes the true event name as the first argument.
+    trigger: function(events) {
+      var event, node, calls, tail, args, all, rest;
+      if (!(calls = this._callbacks)) return this;
+      all = calls['all'];
+      (events = events.split(/\s+/)).push(null);
+      // Save references to the current heads & tails.
+      while (event = events.shift()) {
+        if (all) events.push({next: all.next, tail: all.tail, event: event});
+        if (!(node = calls[event])) continue;
+        events.push({next: node.next, tail: node.tail});
+      }
+      // Traverse each list, stopping when the saved tail is reached.
+      rest = slice.call(arguments, 1);
+      while (node = events.pop()) {
+        tail = node.tail;
+        args = node.event ? [node.event].concat(rest) : rest;
+        while ((node = node.next) !== tail) {
+          node.callback.apply(node.context || this, args);
+        }
+      }
+      return this;
+    }
+
+  };
+
+Shave.Mixins = {
+    // shortcut to define
+    define: function (name, def) {
+        Object.defineProperty(this, name, def);
+    }
+}
 
 // MODEL
 Shave.Model = function (attributes) {
     for (var attr in attributes) {
-      this[attr] = attributes[attr];
+        this[attr] = attributes[attr];
     }
     this._deps = {};
-    this.initProperties();
+    this._initProperties();
     this.initialize.apply(this, arguments);
+    Object.preventExtensions(this);
 }
 
 // tack on our extend function
 Shave.Model.extend = extend;
 
 
+_.extend(Shave.Model.prototype, Shave.Events, Shave.Mixins, {
+    // stubbed out to be overwritten
+    initialize: function(){},
 
-// MODEL prototype
-Object.defineProperty(Shave.Model.prototype, 'initProperties', {
-    value: function () {
-        var val, prop, def, type, filler;
+    _initProperties: function () {
+        var val, prop, def, type, filler, self = this;
         
         this.definition = {};
         // loop through given properties
@@ -84,63 +164,97 @@ Object.defineProperty(Shave.Model.prototype, 'initProperties', {
                 type = this._ensureValidType(val[0] || val.type);
                 if (type) def.type = type;
                 if (val[1] || val.required) def.required = true;
+                // set default if defined
                 filler = val[2] || val.default;
-                if (filler) def.default = filler;
+                if (filler) def.value = filler;
                 if (val[3] || val.ignore) def.ignore = true;
             }
         }
 
         // register derived properties as part of the definition
         this._registerDerived();
-        this.createGettersSetters();
+        this._createGettersSetters();
         // freeze our props and definition
         Object.freeze(this.props);
-        Object.freeze(this.definition);
-    }
-});
-
-Object.defineProperty(Shave.Model.prototype, 'createGettersSetters', {
-    value: function () {
-      var item, def;
-      // create getters/setters based on definitions
-      for (item in this.definition) {
-        def = this.definition[item];
-        desc = {};
-        // create our setter
-        desc.set = function (def, item) {
-            return function (val) {
-              // check type if we have one
-              if (def.type && typeof val !== def.type) {
-                throw new TypeError('Property \'' + item + '\' must be of type ' + def.type); 
-              }
-            };
-        }(def, item);
-        // create our getter
-        desc.get = function () {
-          
-        };
-        //desc.writable = !def.readonly;
-        
-        // define our property
-        console.log(item, desc.set);
-        Object.defineProperty(this, item, desc);
-      }
-    }
-});
-
-//Object.defineProperty(Shave.Model.prototype, )
-
-_.extend(Shave.Model.prototype, {
-    // container for our raw values
-    _raw: {},
-    
-    // stubbed out to be overwritten
-    initialize: function(){},
-    
+        //Object.freeze(this.definition);
+    },
     // just makes friendlier errors when trying to define a new model
     // only used when setting up original property definitions
     _ensureValidType: function (type) {
       return _.contains(['string', 'number', 'bool', 'array', 'object', 'date'], type) ? type : undefined;
+    },
+    _createGettersSetters: function () {
+        var item, def, desc, self = this;
+          // create getters/setters based on definitions
+          for (item in this.definition) {
+            def = this.definition[item];
+            desc = {};
+            // create our setter
+            desc.set = function (def, item, self) {
+                return function (val) {
+                    var newVal;
+                    // check type if we have one
+                    switch (def.type) {
+                    case 'date':
+                        if (!_.isDate(val)) {
+                            throw new TypeError('Property \'' + item + '\' must be of type ' + def.type);
+                        }
+                        newVal = val.valueOf(val);
+                        break;
+                    default: 
+                        // handles string/number/object
+                        if (def.type && typeof val !== def.type) {
+                            throw new TypeError('Property \'' + item + '\' must be of type ' + def.type); 
+                        }
+                        newVal = val;
+                        break;
+                    }
+
+                    // only change if different
+                    if (!_.isEqual(def.value, newVal)) {
+                        // trigger change
+                        self.trigger('change:' + item, self, newVal);
+                        def.value = newVal;
+                    }
+                };
+            }(def, item, self);
+            // create our getter
+            desc.get = function (def, attributes) {
+                return function (val) {
+                    if (def.value) {
+                        if (def.type === 'date') {
+                            return new Date(def.value);
+                        }
+                        return def.value;
+                    }
+                    return ;
+                }
+            }(def);
+            //desc.writable = !def.readonly;
+            
+            // define our property
+            this.define(item, desc);
+        }
+
+        this.define('attributes', {
+            get: function (self) {
+                return function () {
+                    var res = {};
+                    for (var item in self.definition) {
+                        res[item] = self[item];
+                    }
+                    return res;
+                }
+            }(this)
+        })
+
+        this.define('keys', {
+            get: function (self) {
+                return function () {
+                    return Object.keys(self.attributes);
+                }
+            }(this)
+        })
     },
     // stores an object of arrays that specifies the derivedProperties
     // that depend on each attribute
@@ -153,10 +267,8 @@ _.extend(Shave.Model.prototype, {
           self._deps[dep] = _(self._deps[dep] || []).union([key]);
         }); 
       }
-    },
-  });
-
-  
+    }
+})
 
 
 // simple test case
@@ -196,4 +308,4 @@ var model = new MyModel({
 model.firstName = "332342";
 
 
-console.log(model);
+//console.log(model, definition);
