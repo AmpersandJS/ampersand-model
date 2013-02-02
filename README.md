@@ -1,2 +1,1 @@
-shave
-=====
+# StrictModel

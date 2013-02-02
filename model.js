@@ -1,418 +1,392 @@
-(function () {
-    "use strict";
-    // Initial Setup
-    // -------------
+var Backbone = require('backbone'),
+    Capsule = require('capsule'),
+    _ = require('underscore');
 
-    // Save a reference to the global object (`window` in the browser, `global`
-    // on the server).
-    var root = this;
 
-    // Save the previous value of the `Shave` variable, so that it can be
-    // restored later on, if `noConflict` is used.
-    var previousShave = root.Shave;
+var Shave = {};
 
-    // Create a local reference to slice/splice.
-    var slice = Array.prototype.slice;
-    var splice = Array.prototype.splice;
+// HELPERS
+// Shared empty constructor function to aid in prototype-chain creation.
+var ctor = function () {};
 
-    // The top-level namespace. All public Shave classes and modules will
-    // be attached to this. Exported for both CommonJS and the browser.
-    var Shave;
-    if (typeof exports !== 'undefined') {
-        Shave = exports;
+// Helper function to correctly set up the prototype chain, for subclasses.
+// Similar to `goog.inherits`, but uses a hash of prototype properties and
+// class properties to be extended.
+var inherits = function (parent, protoProps, staticProps) {
+    var child;
+
+    // The constructor function for the new subclass is either defined by you
+    // (the "constructor" property in your `extend` definition), or defaulted
+    // by us to simply call the parent's constructor.
+    if (protoProps && protoProps.hasOwnProperty('constructor')) {
+        child = protoProps.constructor;
     } else {
-        Shave = root.Shave = {};
+        child = function () { parent.apply(this, arguments); };
     }
 
-    // Current version of the library. Keep in sync with `package.json`.
-    Shave.VERSION = '0.9.0';
+    // Inherit class (static) properties from parent.
+    _.extend(child, parent);
 
-    // Require Underscore, if we're on the server, and it's not already present.
-    var _ = root._;
-    if (!_ && (typeof require !== 'undefined')) _ = require('underscore');
+    // Set the prototype chain to inherit from `parent`, without calling
+    // `parent`'s constructor function.
+    ctor.prototype = parent.prototype;
+    child.prototype = new ctor();
 
-    // For Shave's purposes, jQuery, Zepto, or Ender owns the `$` variable.
-    var $ = root.jQuery || root.Zepto || root.ender;
+    // Add prototype properties (instance properties) to the subclass,
+    // if supplied.
+    if (protoProps) _.extend(child.prototype, protoProps);
 
-    // Runs Shave.js in *noConflict* mode, returning the `Shave` variable
-    // to its previous owner. Returns a reference to this Shave object.
-    Shave.noConflict = function () {
-        root.Shave = previousShave;
-        return this;
-    };
+    // Add static properties to the constructor function, if supplied.
+    if (staticProps) _.extend(child, staticProps);
 
-    // HELPERS
-    // Shared empty constructor function to aid in prototype-chain creation.
-    var ctor = function () {};
+    // Correctly set child's `prototype.constructor`.
+    child.prototype.constructor = child;
 
-    // Helper function to correctly set up the prototype chain, for subclasses.
-    // Similar to `goog.inherits`, but uses a hash of prototype properties and
-    // class properties to be extended.
-    var inherits = function (parent, protoProps, staticProps) {
-        var child;
+    // Set a convenience property in case the parent's prototype is needed later.
+    child.__super__ = parent.prototype;
 
-        // The constructor function for the new subclass is either defined by you
-        // (the "constructor" property in your `extend` definition), or defaulted
-        // by us to simply call the parent's constructor.
-        if (protoProps && protoProps.hasOwnProperty('constructor')) {
-            child = protoProps.constructor;
+    return child;
+};
+
+var extend = function (protoProps, classProps) {
+    var child = inherits(this, protoProps, classProps);
+    child.extend = this.extend;
+    return child;
+};
+
+// Sugar for defining properties a la ES5.
+var Mixins = Shave.Mixins = {
+    // shortcut for Object.defineProperty
+    define: function (name, def) {
+        Object.defineProperty(this, name, def);
+    },
+    defineGetter: function (name, handler) {
+        this.define(name, {
+            get: handler.bind(this)
+        });
+    },
+    defineSetter: function (name, handler) {
+        this.define(name, {
+            set: handler.bind(this)
+        });
+    }
+};
+
+// global model storage
+Shave.registry = {};
+
+Shave.getModel = function (type, id, ns) {
+    var reg = Shave.registry;
+    if (ns) {
+        return reg[ns] && reg[ns][type + id];
+    } else {
+        return reg[type + id];
+    }
+};
+
+// MODEL
+var Model = Shave.Model = function (attrs, options) {
+    var modelFound,
+        opts = _.defaults(options || {}, {
+            seal: true
+        });
+
+    // always return model initted model if we've already got it in cache.
+    if (attrs.id) {
+        /*
+        if (modelFound = Shave.registry.lookup(this.type, attrs.id, opts.namespace)) {
+            console.log('found it', modelFound.attrs, modelFound.type);
+            return modelFound;
+        }
+        */
+    }
+    this._namespace = opts.namespace;
+    _.extend(this, Backbone.Events);
+    this._initted = false;
+    this._deps = {};
+    this._initProperties();
+    this._initCollections();
+    this._cache = {};
+    for (var item in attrs) {
+        this[item] = attrs[item];
+    }
+    this.init.apply(this, arguments);
+    if (attrs.id) this.register(attrs.id);
+    this.previous = this.attributes;
+    this._initted = true;
+};
+
+
+_.extend(Model.prototype, Mixins, {
+    // stubbed out to be overwritten
+    init: function () {},
+
+    register: function (id) {
+        var ns = this._namespace,
+            registry = (ns) ? (Shave.registry[ns] || (Shave.registry[ns] = {})) : Shave.registry;
+        registry[this.type + id] = this;
+    },
+
+    // for multi-set
+    set: function (attrs, value) {
+        if (typeof attrs === 'string' && typeof value !== 'undefined') {
+            this[attrs] = value;
         } else {
-            child = function () { parent.apply(this, arguments); };
-        }
-
-        // Inherit class (static) properties from parent.
-        _.extend(child, parent);
-
-        // Set the prototype chain to inherit from `parent`, without calling
-        // `parent`'s constructor function.
-        ctor.prototype = parent.prototype;
-        child.prototype = new ctor();
-
-        // Add prototype properties (instance properties) to the subclass,
-        // if supplied.
-        if (protoProps) _.extend(child.prototype, protoProps);
-
-        // Add static properties to the constructor function, if supplied.
-        if (staticProps) _.extend(child, staticProps);
-
-        // Correctly set child's `prototype.constructor`.
-        child.prototype.constructor = child;
-
-        // Set a convenience property in case the parent's prototype is needed later.
-        child.__super__ = parent.prototype;
-
-        return child;
-    };
-
-    var extend = function (protoProps, classProps) {
-        var child = inherits(this, protoProps, classProps);
-        child.extend = this.extend;
-        return child;
-    };
-
-
-    Shave.Events = {
-        // our callback container
-        _callbacks: {},
-        
-        // Bind an event, specified by a string name, `ev`, to a `callback`
-        // function. Passing `"all"` will bind the callback to all events fired.
-        on: function (events, callback, context) {
-            var ev;
-            events = events.split(/\s+/);
-            var calls = this._callbacks;
-            while (ev = events.shift()) {
-                // Create an immutable callback list, allowing traversal during
-                // modification.  The tail is an empty object that will always be used
-                // as the next node.
-                var list  = calls[ev] || (calls[ev] = {});
-                var tail = list.tail || (list.tail = list.next = {});
-                tail.callback = callback;
-                tail.context = context;
-                list.tail = tail.next = {};
-            }
-            return this;
-        },
-
-        // Remove one or many callbacks. If `context` is null, removes all callbacks
-        // with that function. If `callback` is null, removes all callbacks for the
-        // event. If `ev` is null, removes all bound callbacks for all events.
-        off: function (events, callback, context) {
-            var ev, calls, node;
-            if (!events) {
-                this._callbacks = {};
-            } else if (calls = this._callbacks) {
-                events = events.split(/\s+/);
-                while (ev = events.shift()) {
-                    node = calls[ev];
-                    delete calls[ev];
-                    if (!callback || !node) continue;
-                    // Create a new list, omitting the indicated event/context pairs.
-                    while ((node = node.next) && node.next) {
-                        if (node.callback === callback &&
-                        (!context || node.context === context)) continue;
-                        this.on(ev, node.callback, node.context);
-                    }
-                }
-            }
-            return this;
-        },
-
-        // Trigger an event, firing all bound callbacks. Callbacks are passed the
-        // same arguments as `trigger` is, apart from the event name.
-        // Listening for `"all"` passes the true event name as the first argument.
-        trigger: function (events) {
-            var event, node, calls, tail, args, all, rest;
-            if (!(calls = this._callbacks)) return this;
-            all = calls.all;
-            (events = events.split(/\s+/)).push(null);
-            // Save references to the current heads & tails.
-            while (event = events.shift()) {
-                if (all) events.push({next: all.next, tail: all.tail, event: event});
-                if (!(node = calls[event])) continue;
-                events.push({next: node.next, tail: node.tail});
-            }
-            // Traverse each list, stopping when the saved tail is reached.
-            rest = slice.call(arguments, 1);
-            while (node = events.pop()) {
-                tail = node.tail;
-                args = node.event ? [node.event].concat(rest) : rest;
-                while ((node = node.next) !== tail) {
-                    node.callback.apply(node.context || this, args);
-                }
-            }
-            return this;
-        }
-
-    };
-
-    Shave.Mixins = {
-        // shortcut for Object.defineProperty
-        define: function (name, def) {
-            Object.defineProperty(this, name, def);
-        },
-        defineGetter: function (name, handler) {
-            this.define(name, {
-                get: handler.bind(this)
-            });
-        }
-    };
-
-    // MODEL
-    Shave.Model = function (attributes) {
-        this._deps = {};
-        this._initProperties();
-        this.initialize.apply(this, arguments);
-        //Object.preventExtensions(this);
-    };
-
-    // tack on our extend function
-    Shave.Model.extend = extend;
-
-
-    _.extend(Shave.Model.prototype, Shave.Events, Shave.Mixins, {
-        // stubbed out to be overwritten
-        initialize: function () {},
-
-        set: function (attrs) {
             for (var attr in attrs) this[attr] = attrs[attr];
-        },
+        }
+    },
 
-        _initProperties: function () {
-            var self = this,
-                val, 
-                prop, 
-                item,
-                def, 
-                type, 
-                filler;
-            
-            this.definition = {};
+    get: function (attr) {
+        return this[attr];
+    },
 
-            function addToDef(name, val, isSession) {
-                self.definition[name] = def = {};
-                if (_.isString(val)) {
-                    // grab our type if all we've got is a string
-                    type = self._ensureValidType(val);
-                    if (type) def.type = type;
-                } else {
-                    type = self._ensureValidType(val[0] || val.type);
-                    if (type) def.type = type;
-                    if (val[1] || val.required) def.required = true;
-                    // set default if defined
-                    filler = val[2] || val.default;
-                    if (filler) def.value = filler;
-                    if (isSession) def.session = true;
-                }
+    // convenience methods for manipulating array properties
+    addListVal: function (prop, value, prepend) {
+        var list = _.clone(this[prop]) || [];
+        if (!_(list).contains(value)) {
+            list[prepend ? 'unshift' : 'push'](value);
+            this[prop] = list;
+        }
+        return this;
+    },
+    removeListVal: function (prop, value) {
+        var list = _.clone(this[prop]) || [];
+        if (_(list).contains(value)) {
+            this[prop] = _(list).without(value);
+        }
+        return this;
+    },
+    hasListVal: function (prop, value) {
+        return _.contains(this[prop] || [], value);
+    },
+
+    _initCollections: function () {
+        var coll;
+        if (!this.collections) return;
+        for (coll in this.collections) {
+            this[coll] = new this.collections[coll]();
+            this[coll].parent = this;
+        }
+    },
+
+    _initProperties: function () {
+        var self = this,
+            definition = this.definition = {},
+            val,
+            prop,
+            item,
+            type,
+            filler;
+
+        this.cid = _.uniqueId('model');
+
+        function addToDef(name, val, isSession) {
+            var def = definition[name] = {};
+            if (_.isString(val)) {
+                // grab our type if all we've got is a string
+                type = self._ensureValidType(val);
+                if (type) def.type = type;
+            } else {
+                type = self._ensureValidType(val[0] || val.type);
+                if (type) def.type = type;
+                if (val[1] || val.required) def.required = true;
+                // set default if defined
+                filler = val[2] || val.default;
+                if (filler) def.value = filler;
+                if (isSession) def.session = true;
+                if (val.setOnce) def.setOnce = true;
             }
+        }
 
-            // loop through given properties
-            for (item in this.props) {
-                addToDef(item, this.props[item]);
-            }
-            // loop through session props
-            for (prop in this.session) {
-                addToDef(prop, this.session[prop], true);
-            }
+        // loop through given properties
+        for (item in this.props) {
+            addToDef(item, this.props[item]);
+        }
+        // loop through session props
+        for (prop in this.session) {
+            addToDef(prop, this.session[prop], true);
+        }
 
-            // register derived properties as part of the definition
-            this._registerDerived();
-            this._createGettersSetters();
+        // always add "id" as a definition or make sure it's 'setOnce'
+        if (definition.id) {
+            definition.id.setOnce = true;
+        } else {
+            addToDef('id', {setOnce: true});
+        }
 
-            // prevent this thing from adding/removing properties
-            Object.preventExtensions(this);
-            Object.seal(this);
+        // register derived properties as part of the definition
+        this._registerDerived();
+        this._createGettersSetters();
 
-            // freeze attributes used to define object
-            Object.freeze(this.session);
-            Object.freeze(this.derived);
-            Object.freeze(this.props);
-        },
-        // just makes friendlier errors when trying to define a new model
-        // only used when setting up original property definitions
-        _ensureValidType: function (type) {
-            return _.contains(['string', 'number', 'bool', 'array', 'object', 'date'], type) ? type : undefined;
-        },
-        _createGettersSetters: function () {
-            var item, def, desc, self = this;
-            
-            // create getters/setters based on definitions
-            for (item in this.definition) {
-                def = this.definition[item];
-                desc = {};
-                // create our setter
-                desc.set = function (def, item, self) {
-                    return function (val) {
-                        var newVal;
-                        // check type if we have one
-                        switch (def.type) {
-                        case 'date':
-                            if (!_.isDate(val)) {
-                                throw new TypeError('Property \'' + item + '\' must be of type ' + def.type);
+        // freeze attributes used to define object
+        if (this.session) Object.freeze(this.session);
+        //if (this.derived) Object.freeze(this.derived);
+        if (this.props) Object.freeze(this.props);
+    },
+    // just makes friendlier errors when trying to define a new model
+    // only used when setting up original property definitions
+    _ensureValidType: function (type) {
+        return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date'], type) ? type : undefined;
+    },
+    _validate: function () { return true; },
+    _createGettersSetters: function () {
+        var item, def, desc, self = this;
+
+        // create getters/setters based on definitions
+        for (item in this.definition) {
+            def = this.definition[item];
+            desc = {};
+            // create our setter
+            desc.set = function (def, item, self) {
+                return function (val, options) {
+                    var opts = options || {},
+                        newType = typeof val,
+                        interpretedType,
+                        newVal = val;
+
+                    // check type if we have one
+                    if (def.type === 'date') {
+                        if (!_.isDate(val)) {
+                            try {
+                                newVal = (new Date(parseInt(val, 10))).valueOf();
+                                newType = 'date';
+                            } catch (e) {
+                                newType = typeof val;
                             }
-                            newVal = val.valueOf(val);
-                            break;
-                        default: 
-                            // handles string/number/object
-                            if (def.type && typeof val !== def.type) {
-                                throw new TypeError('Property \'' + item + '\' must be of type ' + def.type); 
-                            }
-                            newVal = val;
-                            break;
+                        } else {
+                            newType = 'date';
+                            newVal = val.valueOf();
                         }
+                    } else if (def.type === 'array') {
+                        newType = _.isArray(val) ? 'array' : typeof val;
+                    } else if (def.type === 'object') {
+                        // we have to have a way of supporting "missing" objects. Null is an object, but
+                        // setting a value to undefined should work too, IMO.
+                        // We just override it, in that case.
+                        if (typeof val !== 'object' && _.isUndefined(val)) {
+                            newVal = null;
+                            newType = 'object';
+                        }
+                    }
 
-                        // only change if different
-                        if (!_.isEqual(def.value, newVal)) {
-                            // trigger change
+                    if (def.type !== newType) {
+                        throw new TypeError('Property \'' + item + '\' must be of type ' + def.type + '. Tried to set ' + val);
+                    }
+
+                    // if trying to set id after it's already been set
+                    // reject that
+                    if (def.setOnce && def.value !== undefined && !_.isEqual(def.value, newVal)) throw new TypeError('Property \'' + item + '\' can only be set once.');
+
+                    this.previous = this.attributes;
+
+                    // only change if different
+                    if (!_.isEqual(def.value, newVal)) {
+                        def.value = newVal;
+                        // trigger change
+                        if (self._initted) {
                             self.trigger('change:' + item, self, newVal);
                             (self._deps[item] || []).forEach(function (derTrigger) {
-                                self.trigger('change:' + derTrigger, self, newVal);
+                                // blow away our cache
+                                delete self._cache[derTrigger];
+                                self.trigger('change:' + derTrigger, self, self.derived[derTrigger]);
                             });
-                            def.value = newVal;
                         }
-                    };
-                }(def, item, self);
-                // create our getter
-                desc.get = function (def, attributes) {
-                    return function (val) {
-                        if (def.value) {
-                            if (def.type === 'date') {
-                                return new Date(def.value);
-                            }
-                            return def.value;
-                        }
-                        return;
-                    };
-                }(def);
-                //desc.writable = !def.readonly;
-                
-                // define our property
-                this.define(item, desc);
-            }
-
-            this.defineGetter('attributes', function () {
-                var res = {};
-                for (var item in this.definition) res[item] = this[item];
-                return res;
-            });
-
-            this.defineGetter('keys', function () {
-                return Object.keys(this.attributes);
-            });
-
-            this.defineGetter('json', function () {
-                return JSON.stringify(this._getAttributes(false, true));
-            });
-
-            this.defineGetter('derived', function () {
-                var res = {};
-                for (var item in this._derived) res[item] = this._derived[item].fn.apply(this);
-                return res;
-            });
-
-            this.defineGetter('toTemplate', function () {
-                return _.extend(this._getAttributes(true), this.derived);
-            });
-        },
-
-        _getAttributes: function (includeSession, raw) {
-            var res = {};
-            for (var item in this.definition) {
-                if (!includeSession) {
-                    if (!this.definition[item].session) {
-                        res[item] = (raw) ? this.definition[item].value : this[item];
+                        this.previous = this.attributes;
                     }
-                } else {
+                };
+            }(def, item, self);
+            // create our getter
+            desc.get = function (def, attributes) {
+                return function (val) {
+                    if (typeof def.value !== 'undefined') {
+                        if (def.type === 'date') {
+                            return new Date(def.value);
+                        }
+                        return def.value;
+                    }
+                    return;
+                };
+            }(def);
+
+            // define our property
+            this.define(item, desc);
+        }
+
+        this.defineGetter('attributes', function () {
+            var res = {};
+            for (var item in this.definition) res[item] = this[item];
+            return res;
+        });
+
+        this.defineGetter('keys', function () {
+            return Object.keys(this.attributes);
+        });
+
+        this.defineGetter('json', function () {
+            return JSON.stringify(this._getAttributes(false, true));
+        });
+
+        this.defineGetter('derived', function () {
+            var res = {};
+            for (var item in this._derived) res[item] = this._derived[item].fn.apply(this);
+            return res;
+        });
+
+        this.defineGetter('toTemplate', function () {
+            return _.extend(this._getAttributes(true), this.derived);
+        });
+    },
+
+    _getAttributes: function (includeSession, raw) {
+        var res = {};
+        for (var item in this.definition) {
+            if (!includeSession) {
+                if (!this.definition[item].session) {
                     res[item] = (raw) ? this.definition[item].value : this[item];
                 }
-            }
-            return res;
-        },
-
-        // stores an object of arrays that specifies the derivedProperties
-        // that depend on each attribute
-        _registerDerived: function () {
-            var self = this, depList;
-            if (!this.derived) return;
-            this._derived = this.derived;
-            for (var key in this.derived) {
-                depList = this.derived[key].deps;
-                if (!_.isArray(depList)) depList = [depList];
-                _.each(depList, function (dep) {
-                    self._deps[dep] = _(self._deps[dep] || []).union([key]);
-                }); 
+            } else {
+                res[item] = (raw) ? this.definition[item].value : this[item];
             }
         }
-    });
-
-}).call(this);
-
-// simple test case
-var MyModel = Shave.Model.extend({
-    props: {
-        firstName: ['string', true],
-        lastName: ['string', true],
-        age: ['number', false, 12],
-        awesome: ['bool', false, null, true],
-        hairColors: 'array',
-        meta: {
-            type: 'object'
-        },
-        favoriteColor: {
-            type: 'string',
-            default: 'blue',
-            validator: function (val) {
-                return _.contains(['red', 'green', 'blue'], val);
-            },
-            required: true,
-            local: false
-        },
-        birthDate: 'date'
+        return res;
     },
-    derived: {
-        fullName: {
-            deps: ['firstName', 'lastName'],
-            fn: function () {
-                return this.firstName + ' ' + this.lastName;
-            }
-        },
-        nickName: {
-            deps: 'firstName',
-            fn: function () {
-                return this.firstName + 'ito';
-            }
+
+    // stores an object of arrays that specifies the derivedProperties
+    // that depend on each attribute
+    _registerDerived: function () {
+        var self = this, depList;
+        if (!this.derived) return;
+        this._derived = this.derived;
+        for (var key in this.derived) {
+            depList = this.derived[key].deps;
+            if (!_.isArray(depList)) depList = [depList];
+            _.each(depList, function (dep) {
+                self._deps[dep] = _(self._deps[dep] || []).union([key]);
+            });
+
+            // defined a top-level getter for derived keys
+            this.define(key, {
+                get: _.bind(function (key) {
+                    // is this a derived property we should cache?
+                    if (this._derived[key].cache) {
+                        // do we have it?
+                        if (this._cache.hasOwnProperty(key)) {
+                            return this._cache[key];
+                        } else {
+                            return this._cache[key] = this._derived[key].fn.apply(this);
+                        }
+                    } else {
+                        return this._derived[key].fn.apply(this);
+                    }
+                }, this, key),
+                set: _.bind(function (key) {
+                    throw TypeError(key + ' is a derived property, you can\'t set it directly');
+                }, this, key)
+            });
         }
-    },
-    session: {
-        active: ['bool', true, true]
     }
 });
 
-var model = new MyModel({
-    firstName: "henrik"
-});
+Shave.Model.extend = extend;
 
-model.firstName = "332342";
-
-
-//console.log(model, definition);
+module.exports = Shave;
