@@ -3,7 +3,7 @@ var Backbone = require('backbone'),
     _ = require('underscore');
 
 
-var Shave = {};
+var StrictModel = {};
 
 // HELPERS
 // Shared empty constructor function to aid in prototype-chain creation.
@@ -55,7 +55,7 @@ var extend = function (protoProps, classProps) {
 };
 
 // Sugar for defining properties a la ES5.
-var Mixins = Shave.Mixins = {
+var Mixins = StrictModel.Mixins = {
     // shortcut for Object.defineProperty
     define: function (name, def) {
         Object.defineProperty(this, name, def);
@@ -73,10 +73,10 @@ var Mixins = Shave.Mixins = {
 };
 
 // global model storage
-Shave.registry = {};
+StrictModel.registry = {};
 
-Shave.getModel = function (type, id, ns) {
-    var reg = Shave.registry;
+StrictModel.getModel = function (type, id, ns) {
+    var reg = StrictModel.registry;
     if (ns) {
         return reg[ns] && reg[ns][type + id];
     } else {
@@ -85,7 +85,7 @@ Shave.getModel = function (type, id, ns) {
 };
 
 // MODEL
-var Model = Shave.Model = function (attrs, options) {
+var Model = StrictModel.Model = function (attrs, options) {
     var modelFound,
         opts = _.defaults(options || {}, {
             seal: true
@@ -94,7 +94,7 @@ var Model = Shave.Model = function (attrs, options) {
     // always return model initted model if we've already got it in cache.
     if (attrs.id) {
         /*
-        if (modelFound = Shave.registry.lookup(this.type, attrs.id, opts.namespace)) {
+        if (modelFound = StrictModel.registry.lookup(this.type, attrs.id, opts.namespace)) {
             console.log('found it', modelFound.attrs, modelFound.type);
             return modelFound;
         }
@@ -123,7 +123,7 @@ _.extend(Model.prototype, Mixins, {
 
     register: function (id) {
         var ns = this._namespace,
-            registry = (ns) ? (Shave.registry[ns] || (Shave.registry[ns] = {})) : Shave.registry;
+            registry = (ns) ? (StrictModel.registry[ns] || (StrictModel.registry[ns] = {})) : StrictModel.registry;
         registry[this.type + id] = this;
     },
 
@@ -387,6 +387,6 @@ _.extend(Model.prototype, Mixins, {
     }
 });
 
-Shave.Model.extend = extend;
+StrictModel.Model.extend = extend;
 
-module.exports = Shave;
+module.exports = StrictModel;
