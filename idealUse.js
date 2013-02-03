@@ -1,8 +1,9 @@
-var Task = require('models/task'),
-    Tasks = require('models/tasks'),
-    Messages = require('models/messages'),
-    _ = require('underscore'),
-    StrictModel = require('strictModel').Model;
+// var Task = require('models/task'),
+//     Tasks = require('models/tasks'),
+//     Messages = require('models/messages'),
+
+var _ = require('underscore'),
+    StrictModel = require('./model').Model;
 
 
 module.exports = StrictModel.extend({
@@ -121,7 +122,7 @@ module.exports = StrictModel.extend({
     // key. The child collection will also be given a reference
     // to its parent.
     collections: {
-        messages: Messages
+        // messages: Messages
     },
     getMemberTasks: function (cb) {
         return;
@@ -148,3 +149,6 @@ module.exports = StrictModel.extend({
         app.api.resetLastInteraction(this.team.id, this.id);
     }
 });
+
+var foo = new module.exports()
+console.log(foo)
