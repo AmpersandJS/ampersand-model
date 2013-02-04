@@ -6,8 +6,8 @@
 ;(function() {
 'use strict';
 
-// Baseline setup
-// --------------
+// Initial setup
+// -------------
 
 // Establish the root object, `window` in the browser, or `global` on the server.
 var root = this;
@@ -17,6 +17,9 @@ var root = this;
 var Strict = typeof exports !== 'undefined' ? exports : root.Strict = {},
   toString = Object.prototype.toString,
   slice = Array.prototype.slice;
+
+// Current version of the library. Keep in sync with `package.json`.
+Strict.VERSION = '0.0.1';
 
 // Require Underscore, if we're on the server, and it's not already present.
 var _ = root._;
@@ -77,17 +80,22 @@ var extend = function (protoProps, classProps) {
   return child;
 };
 
+// Mixins
+// ------
+
 // Sugar for defining properties a la ES5.
 var Mixins = Strict.Mixins = {
   // shortcut for Object.defineProperty
   define: function (name, def) {
     Object.defineProperty(this, name, def);
   },
+
   defineGetter: function (name, handler) {
     this.define(name, {
       get: handler.bind(this)
     });
   },
+
   defineSetter: function (name, handler) {
     this.define(name, {
       set: handler.bind(this)
@@ -95,19 +103,21 @@ var Mixins = Strict.Mixins = {
   }
 };
 
-// Schema.Registry
+// Strict.Registry
 // ---------------
 
 // Internal storage for models, seperate namespace
 // storage from default to prevent collision of matching
 // model type+id and namespace name
 
-var Registry = Schema.Registry = function () {
+var Registry = Strict.Registry = function () {
   this._cache = {}
   this._namespaces = {}
 };
 
+// Attach all inheritable methods to the Registry prototype.
 _.extend(Registry.prototype, {
+  // Get the general or namespaced internal cache
   _getCache: function(ns) {
     if (ns) {
       this._namespaces[ns] || (this._namespaces[ns] = {});
@@ -116,11 +126,13 @@ _.extend(Registry.prototype, {
     return this._cache;
   },
 
+  // Find the cached model
   lookup: function (type, id, ns) {
     var cache = this._getCache(ns);
     return cache && cache[type + id];
   },
 
+  // Add a model to the cache if it has not already been set
   store: function (model) {
     var cache = this._getCache(model._namespace),
       key = model.type + model.id;
@@ -129,6 +141,7 @@ _.extend(Registry.prototype, {
     return this;
   },
 
+  // Remove a stored model from the cache, return `true` if removed
   remove: function (type, id, ns) {
     var cache = this._getCache(ns);
     if (this.lookup.apply(this, arguments)) {
@@ -136,19 +149,22 @@ _.extend(Registry.prototype, {
       return true;
     }
     return false;
+  },
+
+  // Reset internal cache
+  clear: function() {
+    this._cache = {};
+    this._namespaces = {}
   }
 });
 
+// Create the default Strict.registry.
 Strict.registry = new Registry();
 
 // Strict.Model
 // ------------
 
 var Model = Strict.Model = function (attrs, options) {
-  // Return instance if called directly
-  if (!(this instanceof Model)) {
-    return new Model(attrs, options);
-  }
   attrs = attrs || {};
   options = options || {};
 
@@ -176,10 +192,11 @@ var Model = Strict.Model = function (attrs, options) {
   }
   this.init.apply(this, arguments);
   if (attrs.id) Strict.registry.store(this);
-  this.previous = this.attributes;
+  this._previous = _.clone(this.attributes); // Should this be set right away?
   this._initted = true;
 };
 
+// Attach all inheritable methods to the Model prototype.
 _.extend(Model.prototype, Backbone.Events, Mixins, {
   idAttribute: 'id',
   idDefinition: {
@@ -198,6 +215,7 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
       Strict.registry.remove(this.type, this.id, this._namespace)
     };
     this.trigger('remove', this);
+    this.off();
     return this;
   },
 
@@ -206,7 +224,10 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
     if (typeof attrs === 'string' && typeof value !== 'undefined') {
       this[attrs] = value;
     } else {
+      this._changing = true;
       for (var attr in attrs) this[attr] = attrs[attr];
+      this.trigger('change', this, value);
+      this._changing = false;
     }
   },
 
@@ -223,6 +244,11 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
     }
     return this;
   },
+
+  previous: function(attr) {
+    return attr ? this._previous[attr] : _.clone(this._previous);
+  },
+
   removeListVal: function (prop, value) {
     var list = _.clone(this[prop]) || [];
     if (_(list).contains(value)) {
@@ -230,9 +256,12 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
     }
     return this;
   },
+
   hasListVal: function (prop, value) {
     return _.contains(this[prop] || [], value);
   },
+
+  // -----------------------------------------------------------------------
 
   // Capsule?
   // _initCollections: function () {
@@ -244,6 +273,8 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
   //   }
   // },
 
+  // Check that all required attributes are present
+  // TODO: should this throw an error or return boolean?
   _verifyRequired: function() {
     var attrs = this.attributes;
     for (var def in this.definition) {
@@ -333,7 +364,10 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
           var opts = options || {},
             newType = typeof val,
             interpretedType,
-            newVal = val;
+            newVal = val,
+            changing = self._changing;
+
+          self._changing = true;
 
           // check type if we have one
           if (def.type === 'date') {
@@ -375,14 +409,14 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
 
           // TODO: determine if its better to save previous attributes in bulk
           // or set only those that have changed
-          this.previous = _.clone(this.attributes);
+          this._previous = _.clone(this.attributes);
 
           // only change if different
           if (!_.isEqual(def.value, newVal)) {
             def.value = newVal;
             // trigger change
             if (self._initted) {
-              self.trigger('change:' + item, self, newVal);
+              self.trigger('change:' + item, self, newVal, options);
               // TODO: ensure that all deps are not undefined before triggering a change event
               (self._deps[item] || []).forEach(function (derTrigger) {
                 // blow away our cache
@@ -390,8 +424,12 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
                 self.trigger('change:' + derTrigger, self, self.derived[derTrigger]);
               });
             }
+            if (!changing) {
+              self.trigger('change', self, options)
+              self._changing = false;
+            }
             // TODO: ask about the purpose of this, clobbering the previous
-            // this.previous = _.clone(this.attributes);
+            // this._previous = _.clone(this.attributes);
           }
         };
       }(def, item, self);
@@ -487,6 +525,7 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
   }
 });
 
+// Set up inheritance for the model
 Strict.Model.extend = extend;
 
 }).call(this);
