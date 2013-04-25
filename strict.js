@@ -183,13 +183,10 @@ var Model = Strict.Model = function (attrs, options) {
   this._initted = false;
   this._deps = {};
   this._initProperties();
-  // Capsule?
-  // this._initCollections();
+  this._initCollections();
   this._cache = {};
   this._verifyRequired();
-  for (var item in attrs) {
-    this[item] = attrs[item];
-  }
+  this.set(attrs, {silent: true});
   this.init.apply(this, arguments);
   if (attrs.id) Strict.registry.store(this);
   this._previous = _.clone(this.attributes); // Should this be set right away?
@@ -219,15 +216,104 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
     return this;
   },
 
-  // for multi-set
-  set: function (attrs, value) {
-    if (typeof attrs === 'string' && typeof value !== 'undefined') {
-      this[attrs] = value;
+  set: function (key, value, options) {
+    var self = this,
+      changing = self._changing,
+      opts,
+      changes = [],
+      newType,
+      interpretedType,
+      newVal,
+      def,
+      attr,
+      attrs,
+      val;
+
+    self._changing = true;
+
+    // Handle both `"key", value` and `{key: value}` -style arguments.
+    if (_.isObject(key) || key == null) {
+      attrs = key;
+      options = value;
     } else {
-      this._changing = true;
-      for (var attr in attrs) this[attr] = attrs[attr];
-      this.trigger('change', this, value);
-      this._changing = false;
+      attrs = {};
+      attrs[key] = value;
+    }
+
+    opts = options || {};
+
+    // For each `set` attribute...
+    for (attr in attrs) {
+      val = attrs[attr];
+      newType = typeof val;
+      newVal = val;
+
+      def = this.definition[attr];
+
+      // check type if we have one
+      if (def.type === 'date') {
+        if (!_.isDate(val)) {
+          try {
+            newVal = (new Date(parseInt(val, 10))).valueOf();
+            newType = 'date';
+          } catch (e) {
+            newType = typeof val;
+          }
+        } else {
+          newType = 'date';
+          newVal = val.valueOf();
+        }
+      } else if (def.type === 'array') {
+        newType = _.isArray(val) ? 'array' : typeof val;
+      } else if (def.type === 'object') {
+        // we have to have a way of supporting "missing" objects.
+        // Null is an object, but setting a value to undefined
+        // should work too, IMO. We just override it, in that case.
+        if (typeof val !== 'object' && _.isUndefined(val)) {
+          newVal = null;
+          newType = 'object';
+        }
+      }
+
+      if (def.type !== newType) {
+        throw new TypeError(''
+          + 'Property \'' + attr + '\' must be of type ' + def.type + '.'
+          + 'Tried to set ' + val
+        );
+      }
+
+      // if trying to set id after it's already been set
+      // reject that
+      if (def.setOnce && def.value !== undefined && !_.isEqual(def.value, newVal)) {
+        throw new TypeError('Property \'' + key + '\' can only be set once.');
+      }
+
+      // TODO: determine if its better to save previous attributes in bulk
+      // or set only those that have changed
+      this._previous = _.clone(this.attributes);
+
+      // only change if different
+      if (!_.isEqual(def.value, newVal)) {
+        def.value = newVal;
+        changes.push(attr);
+      }
+    }
+
+    _.each(changes, function (key) {
+      if (!opts.silent) {
+        self.trigger('change:' + key, self, self[key]);
+      }
+      // TODO: ensure that all deps are not undefined before triggering a change event
+      (self._deps[key] || []).forEach(function (derTrigger) {
+        // blow away our cache
+        delete self._cache[derTrigger];
+        if (!opts.silent) self.trigger('change:' + derTrigger, self, self.derived[derTrigger]);
+      });
+    });
+
+    // fire general change events
+    if (changes.length) {
+      if (!opts.silent) self.trigger('change', self);
     }
   },
 
@@ -263,15 +349,14 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
 
   // -----------------------------------------------------------------------
 
-  // Capsule?
-  // _initCollections: function () {
-  //   var coll;
-  //   if (!this.collections) return;
-  //   for (coll in this.collections) {
-  //     this[coll] = new this.collections[coll]();
-  //     this[coll].parent = this;
-  //   }
-  // },
+  _initCollections: function () {
+     var coll;
+     if (!this.collections) return;
+     for (coll in this.collections) {
+       this[coll] = new this.collections[coll]();
+       this[coll].parent = this;
+     }
+  },
 
   // Check that all required attributes are present
   // TODO: should this throw an error or return boolean?
@@ -343,12 +428,12 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
   // just makes friendlier errors when trying to define a new model
   // only used when setting up original property definitions
   _ensureValidType: function (type) {
-    return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date'], type) 
+    return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date'], type)
       ? type : undefined;
   },
 
   _validate: function () {
-    return true; 
+    return true;
   },
 
   _createGettersSetters: function () {
@@ -359,80 +444,11 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
       def = this.definition[item];
       desc = {};
       // create our setter
-      desc.set = function (def, item, self) {
+      desc.set = function (def, item) {
         return function (val, options) {
-          var opts = options || {},
-            newType = typeof val,
-            interpretedType,
-            newVal = val,
-            changing = self._changing;
-
-          self._changing = true;
-
-          // check type if we have one
-          if (def.type === 'date') {
-            if (!_.isDate(val)) {
-              try {
-                newVal = (new Date(parseInt(val, 10))).valueOf();
-                newType = 'date';
-              } catch (e) {
-                newType = typeof val;
-              }
-            } else {
-              newType = 'date';
-              newVal = val.valueOf();
-            }
-          } else if (def.type === 'array') {
-            newType = _.isArray(val) ? 'array' : typeof val;
-          } else if (def.type === 'object') {
-            // we have to have a way of supporting "missing" objects. 
-            // Null is an object, but setting a value to undefined 
-            // should work too, IMO. We just override it, in that case.
-            if (typeof val !== 'object' && _.isUndefined(val)) {
-              newVal = null;
-              newType = 'object';
-            }
-          }
-
-          if (def.type !== newType) {
-            throw new TypeError(''
-              + 'Property \'' + item + '\' must be of type ' + def.type + '.'
-              + 'Tried to set ' + val
-            );
-          }
-
-          // if trying to set id after it's already been set
-          // reject that
-          if (def.setOnce && def.value !== undefined && !_.isEqual(def.value, newVal)) {
-            throw new TypeError('Property \'' + item + '\' can only be set once.');
-          }
-
-          // TODO: determine if its better to save previous attributes in bulk
-          // or set only those that have changed
-          this._previous = _.clone(this.attributes);
-
-          // only change if different
-          if (!_.isEqual(def.value, newVal)) {
-            def.value = newVal;
-            // trigger change
-            if (self._initted) {
-              self.trigger('change:' + item, self, newVal, options);
-              // TODO: ensure that all deps are not undefined before triggering a change event
-              (self._deps[item] || []).forEach(function (derTrigger) {
-                // blow away our cache
-                delete self._cache[derTrigger];
-                self.trigger('change:' + derTrigger, self, self.derived[derTrigger]);
-              });
-            }
-            if (!changing) {
-              self.trigger('change', self, options)
-              self._changing = false;
-            }
-            // TODO: ask about the purpose of this, clobbering the previous
-            // this._previous = _.clone(this.attributes);
-          }
-        };
-      }(def, item, self);
+          self.set(item, val);
+        }
+      }(def, item);
       // create our getter
       desc.get = function (def, attributes) {
         return function (val) {
@@ -496,8 +512,7 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
     if (!this.derived) return;
     this._derived = this.derived;
     for (var key in this.derived) {
-      depList = this.derived[key].deps;
-      if (!_.isArray(depList)) depList = [depList];
+      depList = this.derived[key].deps || [];
       _.each(depList, function (dep) {
         self._deps[dep] = _(self._deps[dep] || []).union([key]);
       });
@@ -518,7 +533,13 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
           }
         }, this, key),
         set: _.bind(function (key) {
-          throw TypeError(key + ' is a derived property, you can\'t set it directly');
+          var deps = this._derived[key].deps,
+            msg = '"' + key + '" is a derived property, you can\'t set it directly.';
+          if (deps && deps.length) {
+            throw TypeError(msg + ' It is dependent on "' + deps.join('" and "') + '".');
+          } else {
+            throw TypeError(msg);
+          }
         }, this, key)
       });
     }
@@ -527,5 +548,9 @@ _.extend(Model.prototype, Backbone.Events, Mixins, {
 
 // Set up inheritance for the model
 Strict.Model.extend = extend;
+
+// Overwrite Backbone.Model so that collections don't need to be modified in Backbone core
+Backbone.Model = Strict.Model;
+
 
 }).call(this);
