@@ -1,9 +1,11 @@
 {
     "name": "strictmodel",
     "version": "0.0.1",
+    "main": "strict.js",
     "dependencies": {
         "backbone": "1.0.0",
-        "underscore": "1.4.4"
+        "underscore": "1.4.4",
+        "precommit-hook": ""
     },
     "devDependencies": {
         "mocha": "~1.8.1"

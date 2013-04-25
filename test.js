@@ -1,6 +1,6 @@
 'use strict';
 
-var Strict = require('./index'),
+var Strict = require('./strict'),
 assert = require('assert');
 
 var Foo = Strict.Model.extend({
