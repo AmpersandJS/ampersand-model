@@ -126,6 +126,11 @@ This code is currently in use in production for And Bang (https://andbang.com). 
 - Needs better docs/more tests.
 
 
+## Authors
+
+Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions from [@beausorensen](http://twitter.com/beausorensen)
+
+
 ## License
 
 MIT
