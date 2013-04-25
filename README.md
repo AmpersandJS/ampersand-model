@@ -86,7 +86,7 @@ StrictModel.extend({
         // of course you can tack on whatever other methods you want
     }
 });
-
+```
 
 ### Setting model attributes
 
