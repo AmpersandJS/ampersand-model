@@ -247,7 +247,7 @@
         newType = typeof val;
         newVal = val;
 
-        def = this.definition[attr];
+        def = this.definition[attr] || {};
 
         // check type if we have one
         if (def.type === 'date') {
@@ -274,7 +274,7 @@
           }
         }
 
-        if (def.type !== newType) {
+        if (def.type && def.type !== newType) {
           throw new TypeError('Property \'' + attr + '\' must be of type ' + def.type + '. Tried to set ' + val);
         }
 
