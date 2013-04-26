@@ -8,7 +8,7 @@ hint:
 
 # UglifyJS v1.3.4
 min:
-	@echo -n ';' > strict.min.js; uglifyjs strict.js >> strict.min.js;
+	@echo -n ';' > strictmodel.min.js; uglifyjs strictmodel.js >> strictmodel.min.js;
 
 .PHONY: test hint min
 

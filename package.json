@@ -2,7 +2,6 @@
     "name": "strictmodel",
     "version": "0.0.1",
     "author": "Henrik Joreteg <henrik@andyet.net>",
-    "main": "strict.js",
     "contributors": [{
         "name": "Beau Sorensen"
     }],
