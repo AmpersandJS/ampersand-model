@@ -1,11 +1,18 @@
 # StrictModel
 
-Strict models are a drop-in replacement for Backbone models but are far more restrictive. Backbone models have a lot of flexibility in that you don't have to define what you're wanting to store ahead of time. 
+Strict models are meant to be (nearly) a drop-in replacement for Backbone models but are far more restrictive and structured. Backbone models have a lot of flexibility in that you don't have to define what you're wanting to store ahead of time. 
 
 The only challenge with that is that for more complex applications is actually becomes quite tricky to remember what properties are available to you.
 
-Using strict models means they're much more self-documenting. Someone new to the progress can read the models and have a pretty good idea of how the app is put together.
+Using strict models means they're much more self-documenting and helps catch bugs. Someone new to the project can read the models and have a pretty good idea of how the app is put together.
 
+It also uses's ES5's fancy `Object.defineProperty` to treat model attributes as if they were properties.
+
+This means you can set an attribute like this: `user.name = 'henrik'` and still get a `change:name` event fired. 
+
+Obviously, this restriction also means that this won't work in browsers that don't support that. You can check specific browser support here: http://kangax.github.io/es5-compat-table/
+
+This project still needs more love, but I figured I'd open it up for now anyway. Open source, FTW!
 
 ## Key Differences from BackBone
 
@@ -120,9 +127,8 @@ TODO: needs more docs on this
 
 ## Caveats 
 
-This code is currently in use in production for And Bang (https://andbang.com). However...
-
-- There's probably still bugs. Please use carefully.
+- Because it's not based on Backbone's Model prototype adding initted models to a collection will not work as expected because Backbone checks to see if the incoming model is an `instancof Model` which it will never be since it's not inheriting from Backbone's models. So, it require some minor tweaking of Backbone's collection code.
+- There are probably still plenty of bugs. Please use carefully.
 - Needs better docs/more tests.
 
 
