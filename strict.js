@@ -274,7 +274,9 @@
           }
         }
 
-        if (def.type && def.type !== newType) {
+        // If we have a defined type and the new type doesn't match, throw error.
+        // Unless it's not required and the value is undefined.
+        if (def.type && def.type !== newType && (!def.required && !_.isUndefined(val))) {
           throw new TypeError('Property \'' + attr + '\' must be of type ' + def.type + '. Tried to set ' + val);
         }
 
@@ -284,12 +286,9 @@
           throw new TypeError('Property \'' + key + '\' can only be set once.');
         }
 
-        // TODO: determine if its better to save previous attributes in bulk
-        // or set only those that have changed
-        this._previous = _.clone(this.attributes);
-
         // only change if different
         if (!_.isEqual(def.value, newVal)) {
+          self._previous && (self._previous[attr] = def.value);
           def.value = newVal;
           changes.push(attr);
         }
