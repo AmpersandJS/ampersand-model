@@ -28,6 +28,29 @@
   var Backbone = root.Backbone;
   if (!Backbone && (typeof require !== 'undefined')) Backbone = require('backbone');
 
+  // Backbone Collection compatibility fix:
+  // In backbone, when you add an already instantiated model to a collection
+  // the collection checks to see if what you're adding is already a model
+  // the problem is, it does this witn an instanceof check. We're wanting to
+  // use completely different models so the instanceof will fail even if they
+  // are "real" models. So we work around this by overwriting this method from
+  // backbone 1.0.0. The only difference is it compares against our Strict.Model
+  // instead of backbone's.
+  Backbone.Collection.prototype._prepareModel = function (attrs, options) {
+    if (attrs instanceof Strict.Model) {
+      if (!attrs.collection) attrs.collection = this;
+      return attrs;
+    }
+    options || (options = {});
+    options.collection = this;
+    var model = new this.model(attrs, options);
+    if (!model._validate(attrs, options)) {
+      this.trigger('invalid', this, attrs, options);
+      return false;
+    }
+    return model;
+  };
+
   // Helpers
   // -------
 
@@ -172,12 +195,6 @@
         seal: true
       });
 
-    // always return model initted model if we've already got it in cache.
-    if (attrs.id) {
-      if (modelFound = Strict.registry.lookup(this.type, attrs.id, opts.namespace)) {
-        return modelFound;
-      }
-    }
     this._namespace = opts.namespace;
     this._initted = false;
     this._deps = {};

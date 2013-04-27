@@ -162,9 +162,7 @@ describe('Strict.Registry', function () {
       firstName: 'roger',
       thing: 'meow'
     });
-    var blah = new Foo({
-      id: 1
-    });
+    var blah = Strict.registry.lookup('foo', 1);
     assert.strictEqual(foo.firstName, blah.firstName);
     assert.strictEqual(foo, blah);
     foo.on('change', function () {
@@ -175,11 +173,10 @@ describe('Strict.Registry', function () {
 
   it('should remove from registry on remove', function () {
     var foo = new Foo({id: 20, lastName: 'hi'});
-    var blah = new Foo({id: 20});
 
-    assert.strictEqual(foo.lastName, blah.lastName);
     foo.remove();
 
+    // make a new one
     var bar = new Foo({id: 20});
     assert.strictEqual(bar.lastName, undefined);
   });
