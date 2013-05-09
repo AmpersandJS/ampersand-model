@@ -16,7 +16,8 @@ var Foo = Strict.Model.extend({
     num: ['number'],
     today: ['date'],
     hash: ['object'],
-    list: ['array']
+    list: ['array'],
+    myBool: ['boolean', true, false]
   },
   derived: {
     name: {
@@ -47,6 +48,14 @@ describe('Strict.Model', function () {
     });
     assert.strictEqual(foo.name, 'jim tom');
     assert.strictEqual(foo.initials, 'JT');
+  });
+
+  it('should have default values for properties', function () {
+    var foo = new Foo({
+      firstName: 'jim',
+      lastName: 'tom'
+    });
+    assert.strictEqual(foo.myBool, false);
   });
 
   it('should throw an error setting a derived prop', function () {
@@ -119,7 +128,7 @@ describe('Strict.Model', function () {
       thing: 'abc'
     });
 
-    assert.strictEqual(foo.json, '{"firstName":"bob","lastName":"tom","thing":"abc"}');
+    assert.strictEqual(foo.json, '{"firstName":"bob","lastName":"tom","thing":"abc","myBool":false}');
     assert.deepEqual(foo.keys, [
       'firstName',
       'lastName',
@@ -128,6 +137,7 @@ describe('Strict.Model', function () {
       'today',
       'hash',
       'list',
+      'myBool',
       'id'
     ]);
     assert.deepEqual(foo.attributes, {
@@ -138,6 +148,7 @@ describe('Strict.Model', function () {
       today: undefined,
       hash: undefined,
       list: undefined,
+      myBool: false,
       id: undefined
     });
     assert.deepEqual(foo.toTemplate, {
@@ -150,7 +161,8 @@ describe('Strict.Model', function () {
       list: undefined,
       id: undefined,
       name: 'bob tom',
-      initials: 'BT'
+      initials: 'BT',
+      myBool: false
     });
   });
 });

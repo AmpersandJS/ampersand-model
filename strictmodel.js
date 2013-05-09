@@ -404,8 +404,7 @@
           if (type) def.type = type;
           if (val[1] || val.required) def.required = true;
           // set default if defined
-          filler = val[2] || val.default;
-          if (filler) def.value = filler;
+          def.value = !_.isUndefined(val[2]) ? val[2] : val.default;
           if (isSession) def.session = true;
           if (val.setOnce) def.setOnce = true;
         }
