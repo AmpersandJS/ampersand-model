@@ -195,6 +195,8 @@
         seal: true
       });
 
+    // set the collection if passed in
+    if (opts.collection) this.collection = opts.collection;
     this._namespace = opts.namespace;
     this._initted = false;
     this._deps = {};
