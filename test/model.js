@@ -544,7 +544,13 @@ $(document).ready(function() {
   });
 
   test("save, fetch, destroy triggers error event when an error occurs", 3, function () {
-    var model = new Backbone.Model();
+    var Model = Backbone.Model.extend({
+      props: {
+        data: 'number',
+        id: 'number'
+      }
+    })
+    var model = new Model();
     model.on('error', function () {
       ok(true);
     });
@@ -557,7 +563,31 @@ $(document).ready(function() {
   });
 
   test("save with PATCH", function() {
-    doc.clear().set({id: 1, a: 1, b: 2, c: 3, d: 4});
+    var Model = Backbone.Model.extend({
+      props: {
+        id: 'number',
+        title: 'string',
+        author: 'string',
+        length: 'number',
+        a: 'number',
+        b: 'number',
+        c: 'number',
+        d: 'number'
+      }
+    });
+    var doc = new Model({
+        id     :  1,
+        title  : "The Tempest",
+        author : "Bill Shakespeare",
+        length : 123,
+        a: 1,
+        b: 2,
+        c: 3,
+        d: 4
+      });
+
+    collection = new klass();
+    collection.add(doc);
     doc.save();
     equal(this.syncArgs.method, 'update');
     equal(this.syncArgs.options.attrs, undefined);
@@ -571,7 +601,12 @@ $(document).ready(function() {
   });
 
   test("save in positional style", 1, function() {
-    var model = new Backbone.Model();
+    var Model = Backbone.Model.extend({
+      props: {
+        title: 'string'
+      }
+    });
+    var model = new Model();
     model.sync = function(method, model, options) {
       options.success();
     };
@@ -580,7 +615,12 @@ $(document).ready(function() {
   });
 
   test("save with non-object success response", 2, function () {
-    var model = new Backbone.Model();
+    var Model = Backbone.Model.extend({
+      props: {
+        testing: 'string'
+      }
+    });
+    var model = new Model();
     model.sync = function(method, model, options) {
       options.success('', options);
       options.success(null, options);
@@ -608,7 +648,14 @@ $(document).ready(function() {
   });
 
   test("non-persisted destroy", 1, function() {
-    var a = new Backbone.Model({ 'foo': 1, 'bar': 2, 'baz': 3});
+    var Model = Backbone.Model.extend({
+      props: {
+        foo: 'number',
+        bar: 'number',
+        baz: 'number'
+      }
+    });
+    var a = new Model({ 'foo': 1, 'bar': 2, 'baz': 3});
     a.sync = function() { throw "should not be called"; };
     a.destroy();
     ok(true, "non-persisted model should not call sync");
@@ -616,7 +663,13 @@ $(document).ready(function() {
 
   test("validate", function() {
     var lastError;
-    var model = new Backbone.Model();
+    var Model = Backbone.Model.extend({
+      props: {
+        admin: ['boolean', true, true],
+        a: 'number'
+      }
+    });
+    var model = new Model();
     model.validate = function(attrs) {
       if (attrs.admin != this.get('admin')) return "Can't change admin status.";
     };
@@ -637,7 +690,12 @@ $(document).ready(function() {
 
   test("validate on unset and clear", 6, function() {
     var error;
-    var model = new Backbone.Model({name: "One"});
+    var Model = Backbone.Model.extend({
+      props: {
+        name: 'string'
+      }
+    });
+    var model = new Model({name: "One"});
     model.validate = function(attrs) {
       if (!attrs.name) {
         error = true;
@@ -654,12 +712,18 @@ $(document).ready(function() {
     equal(model.get('name'), 'Two');
     delete model.validate;
     model.clear();
-    equal(model.get('name'), undefined);
+    equal(model.get('name'), '');
   });
 
   test("validate with error callback", 8, function() {
     var lastError, boundError;
-    var model = new Backbone.Model();
+    var Model = Backbone.Model.extend({
+      props: {
+        a: 'number',
+        admin: 'boolean'
+      }
+    });
+    var model = new Model();
     model.validate = function(attrs) {
       if (attrs.admin) return "Can't change admin status.";
     };
@@ -678,6 +742,7 @@ $(document).ready(function() {
     equal(boundError, true);
   });
 
+  /*
   test("defaults always extend attrs (#459)", 2, function() {
     var Defaulted = Backbone.Model.extend({
       defaults: {one: 1},
@@ -688,6 +753,7 @@ $(document).ready(function() {
     var providedattrs = new Defaulted({});
     var emptyattrs = new Defaulted();
   });
+  */
 
   test("Inherit class properties", 6, function() {
     var Parent = Backbone.Model.extend({
@@ -714,7 +780,7 @@ $(document).ready(function() {
   });
 
   test("Nested change events don't clobber previous attributes", 4, function() {
-    new Backbone.Model()
+    new (Backbone.Model.extend({props: {state: 'string', other: 'string'}}))()
     .on('change:state', function(model, newState) {
       equal(model.previous('state'), undefined);
       equal(newState, 'hello');
@@ -728,6 +794,7 @@ $(document).ready(function() {
     .set({state: 'hello'});
   });
 
+  /*
   test("hasChanged/set should use same comparison", 2, function() {
     var changed = 0, model = new Backbone.Model({a: null});
     model.on('change', function() {
@@ -739,9 +806,17 @@ $(document).ready(function() {
     .set({a: undefined});
     equal(changed, 1);
   });
+  */
 
   test("#582, #425, change:attribute callbacks should fire after all changes have occurred", 9, function() {
-    var model = new Backbone.Model;
+    var Model = Backbone.Model.extend({
+      props: {
+        a: 'string',
+        b: 'string',
+        c: 'string'
+      }
+    });
+    var model = new Model;
 
     var assertion = function() {
       equal(model.get('a'), 'a');
@@ -756,36 +831,52 @@ $(document).ready(function() {
     model.set({a: 'a', b: 'b', c: 'c'});
   });
 
+  /*
   test("#871, set with attributes property", 1, function() {
     var model = new Backbone.Model();
     model.set({attributes: true});
     ok(model.has('attributes'));
   });
+  */
 
+  /*
   test("set value regardless of equality/change", 1, function() {
     var model = new Backbone.Model({x: []});
     var a = [];
     model.set({x: a});
     ok(model.get('x') === a);
   });
+  */
 
   test("set same value does not trigger change", 0, function() {
-    var model = new Backbone.Model({x: 1});
+    var Model = Backbone.Model.extend({
+      props: {
+        x: 'number'
+      }
+    });
+    var model = new Model({x: 1});
     model.on('change change:x', function() { ok(false); });
     model.set({x: 1});
     model.set({x: 1});
   });
 
   test("unset does not fire a change for undefined attributes", 0, function() {
-    var model = new Backbone.Model({x: undefined});
+    var Model = Backbone.Model.extend({
+      props: {
+        x: 'number'
+      }
+    });
+    var model = new Model({x: undefined});
     model.on('change:x', function(){ ok(false); });
     model.unset('x');
   });
 
+  /*
   test("set: undefined values", 1, function() {
     var model = new Backbone.Model({x: undefined});
     ok('x' in model.attributes);
   });
+  */
 
   test("hasChanged works outside of change events, and true within", 6, function() {
     var model = new Backbone.Model({x: 1});
