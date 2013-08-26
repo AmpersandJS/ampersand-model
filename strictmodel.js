@@ -157,7 +157,7 @@
     // Add a model to the cache if it has not already been set
     store: function (model) {
       var cache = this._getCache(model._namespace),
-        key = model.type + model.id;
+        key = model.type + model.getId();
       // Prevent overriding a previously stored model
       cache[key] = cache[key] || model;
       return this;
@@ -197,6 +197,7 @@
 
     // set the collection if passed in
     if (opts.collection) this.collection = opts.collection;
+    if (opts.parse) attrs = this.parse(attrs, options) || {};
     this._namespace = opts.namespace;
     this._initted = false;
     this._deps = {};
@@ -205,8 +206,8 @@
     this._cache = {};
     this._verifyRequired();
     this.set(attrs, {silent: true});
-    this.init.apply(this, arguments);
-    if (attrs.id) Strict.registry.store(this);
+    this.initialize.apply(this, arguments);
+    if (attrs[this.idAttribute]) Strict.registry.store(this);
     this._previous = _.clone(this.attributes); // Should this be set right away?
     this._initted = true;
   };
@@ -214,20 +215,25 @@
   // Attach all inheritable methods to the Model prototype.
   _.extend(Model.prototype, Backbone.Events, Mixins, {
     idAttribute: 'id',
-    idDefinition: {
-      type: 'number',
-      setOnce: true
+
+    getId: function () {
+      return this.get(this.idAttribute);
     },
 
     // stubbed out to be overwritten
-    init: function () {
+    initialize: function () {
       return this;
+    },
+
+    // backbone compatibility
+    parse: function(resp, options) {
+      return resp;
     },
 
     // Remove model from the registry and unbind events
     remove: function () {
-      if (this.id) {
-        Strict.registry.remove(this.type, this.id, this._namespace);
+      if (this.getId()) {
+        Strict.registry.remove(this.type, this.getId(), this._namespace);
       }
       this.trigger('remove', this);
       this.off();
@@ -245,7 +251,8 @@
         def,
         attr,
         attrs,
-        val;
+        val,
+        changesHash;
 
       self._changing = true;
 
@@ -258,7 +265,7 @@
         attrs[key] = value;
       }
 
-      opts = options || {};
+      opts = _.extend({validate: true}, options);
 
       // For each `set` attribute...
       for (attr in attrs) {
@@ -305,20 +312,32 @@
           throw new TypeError('Property \'' + key + '\' can only be set once.');
         }
 
-        // only change if different
+        // push to changes array if different
         if (!_.isEqual(def.value, newVal)) {
-          self._previous && (self._previous[attr] = def.value);
-          def.value = newVal;
-          changes.push(attr);
+          changes.push({prev: def.value, val: newVal, key: attr});
         }
       }
 
-      _.each(changes, function (key) {
+      // run validation if specified
+      if (opts.validate) {
+        changesHash = {};
+        changes.forEach(function (change) {
+          changesHash[change.key] = change.val;
+        });
+        if (!this._validate(changesHash, opts)) {
+          return false;
+        }
+      }
+
+      _.each(changes, function (change) {
+        // actually update our values
+        self._previous && (self._previous[change.key] = change.prev);
+        self.definition[change.key].value = change.val;
         if (!opts.silent) {
-          self.trigger('change:' + key, self, self[key]);
+          self.trigger('change:' + change.key, self, self[change.key]);
         }
         // TODO: ensure that all deps are not undefined before triggering a change event
-        (self._deps[key] || []).forEach(function (derTrigger) {
+        (self._deps[change.key] || []).forEach(function (derTrigger) {
           // blow away our cache
           delete self._cache[derTrigger];
           if (!opts.silent) self.trigger('change:' + derTrigger, self, self.derived[derTrigger]);
@@ -327,12 +346,93 @@
 
       // fire general change events
       if (changes.length) {
-        if (!opts.silent) self.trigger('change', self);
+        if (!opts.silent) self.trigger('change', self, options);
       }
+
+      return this;
     },
 
     get: function (attr) {
       return this[attr];
+    },
+
+    toJSON: function () {
+      return this.attributes;
+    },
+
+    // Returns `true` if the attribute contains a value that is not null
+    // or undefined.
+    has: function(attr) {
+      var def = this.definition[attr];
+      var val = this.get(attr);
+      if (def && def.type === 'string') {
+        return !!val;
+      } else {
+        return val != null;
+      }
+    },
+
+    // Default URL for the model's representation on the server -- if you're
+    // using Backbone's restful methods, override this to change the endpoint
+    // that will be called.
+    url: function() {
+      var base = _.result(this, 'urlRoot') || _.result(this.collection, 'url') || urlError();
+      if (this.isNew()) return base;
+      return base + (base.charAt(base.length - 1) === '/' ? '' : '/') + encodeURIComponent(this.getId());
+    },
+
+    // A model is new if it has never been saved to the server, and lacks an id.
+    isNew: function() {
+      return this.getId() == null;
+    },
+
+    // return copy of model
+    clone: function () {
+      return new this.constructor(this._getAttributes(true));
+    },
+
+    // Check if the model is currently in a valid state.
+    isValid: function(options) {
+      return this._validate({}, _.extend(options || {}, { validate: true }));
+    },
+
+    escape: function(attr) {
+      return _.escape(this[attr]);
+    },
+
+    unset: function (attr, options) {
+      var def = this.definition[attr];
+      var type = def.type;
+      var val;
+      if (!_.isUndefined(def.default)) {
+        val = def.default;
+      } else if (type === 'string') {
+        val = '';
+      } else if (type === 'object') {
+        val = {};
+      } else if (type === 'array') {
+        val = [];
+      }
+      return this.set(attr, val, options);
+    },
+
+    clear: function () {
+      var self = this;
+      _.each(this._getAttributes(true), function (val, key) {
+        self.unset(key);
+      });
+      return this;
+    },
+
+    // Run validation against the next complete set of model attributes,
+    // returning `true` if all is well. Otherwise, fire an `"invalid"` event.
+    _validate: function(attrs, options) {
+      if (!options.validate || !this.validate) return true;
+      attrs = _.extend({}, this.attributes, attrs);
+      var error = this.validationError = this.validate(attrs, options) || null;
+      if (!error) return true;
+      this.trigger('invalid', this, error, _.extend(options || {}, {validationError: error}));
+      return false;
     },
 
     // convenience methods for manipulating array properties
@@ -422,10 +522,8 @@
       }
 
       // always add "id" as a definition or make sure it's 'setOnce'
-      if (definition.id) {
+      if (definition[this.idAttributes]) {
         definition[this.idAttribute].setOnce = true;
-      } else {
-        addToDef(this.idAttribute, this.idDefinition);
       }
 
       // register derived properties as part of the definition
@@ -442,10 +540,6 @@
     // only used when setting up original property definitions
     _ensureValidType: function (type) {
       return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date'], type) ? type : undefined;
-    },
-
-    _validate: function () {
-      return true;
     },
 
     _createGettersSetters: function () {
@@ -479,13 +573,7 @@
       }
 
       this.defineGetter('attributes', function () {
-        var res = {};
-        for (var item in this.definition) res[item] = this[item];
-        return res;
-      });
-
-      this.defineGetter('keys', function () {
-        return Object.keys(this.attributes);
+        return this._getAttributes();
       });
 
       this.defineGetter('json', function () {
@@ -558,8 +646,22 @@
     }
   });
 
+  // Underscore methods that we want to implement on the Model.
+  var modelMethods = ['keys', 'values', 'pairs', 'invert', 'pick', 'omit'];
+
+  // Mix in each Underscore method as a proxy to `Model#attributes`.
+  _.each(modelMethods, function(method) {
+    Model.prototype[method] = function() {
+      var args = slice.call(arguments);
+      args.unshift(this.attributes);
+      return _[method].apply(_, args);
+    };
+  });
+
   // Set up inheritance for the model
   Strict.Model.extend = extend;
+
+  Model.prototype.init = Model.prototype.initialize;
 
   // Overwrite Backbone.Model so that collections don't need to be modified in Backbone core
   Backbone.Model = Strict.Model;
