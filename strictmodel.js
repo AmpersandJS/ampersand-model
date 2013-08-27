@@ -191,7 +191,7 @@
     options || (options = {});
 
     // set the collection if passed in
-    if (options.collection) this.collection = options.collection;
+    this.collection = options.collection || undefined;
     if (options.parse) attrs = this.parse(attrs, options) || {};
     options._attrs = attrs;
     this._namespace = options.namespace;
@@ -206,6 +206,10 @@
     this.initialize.apply(this, arguments);
     if (attrs[this.idAttribute]) Strict.registry.store(this);
     this._initted = true;
+    this._previousAttributes = {};
+    if (this.seal) {
+      Object.seal(this);
+    }
   };
 
   // Attach all inheritable methods to the Model prototype.
@@ -597,7 +601,7 @@
     },
 
     previous: function (attr) {
-      if (attr == null || !this._previousAttributes) return null;
+      if (attr == null || !Object.keys(this._previousAttributes).length) return null;
       return this._previousAttributes[attr];
     },
 
@@ -812,9 +816,6 @@
   Strict.Model.extend = extend;
 
   Model.prototype.init = Model.prototype.initialize;
-
-  // Overwrite Backbone.Model so that collections don't need to be modified in Backbone core
-  Backbone.Model = Strict.Model;
 
   // Wrap an optional error callback with a fallback error event.
   var wrapError = function (model, options) {

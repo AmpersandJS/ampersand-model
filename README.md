@@ -1,20 +1,29 @@
 # StrictModel
 
-Strict models are meant to be (nearly) a drop-in replacement for Backbone models but are far more restrictive and structured. Backbone models have a lot of flexibility in that you don't have to define what you're wanting to store ahead of time. 
+StrictModel is meant to work as a drop-in replacement for Backbone models. In fact, it's extensively tested against the unit tests from Backbone (open test/index.html to run). 
 
-The only challenge with that is that for more complex applications is actually becomes quite tricky to remember what properties are available to you.
+However, Strict Models are far more restrictive and structured. They force you to specify properties (at at minimum their types) for things you want it to store.
 
-Using strict models means they're much more self-documenting and helps catch bugs. Someone new to the project can read the models and have a pretty good idea of how the app is put together.
+## Why do this?
+
+Backbone models have a lot of flexibility in that you don't have to define what you're wanting to store ahead of time. 
+
+The only challenge with that is that for more complex applications is actually becomes quite difficult to remember what properties are available to you.
+
+Using strict models means they're much more self-documenting and help catch bugs. Someone new to the project can read the models and have a pretty good idea of how the app is put together.
 
 It also uses's ES5's fancy `Object.defineProperty` to treat model attributes as if they were properties.
 
-This means you can set an attribute like this: `user.name = 'henrik'` and still get a `change:name` event fired. 
+That means with Strict Model you can set an attribute like this: `user.name = 'henrik'` and still get a `change:name` event fired. 
 
 Obviously, this restriction also means that this won't work in browsers that don't support that. You can check specific browser support here: http://kangax.github.io/es5-compat-table/
 
-This project still needs more love, but I figured I'd open it up for now anyway. Open source, FTW!
 
-## Key Differences from BackBone
+## Key Differences from Backbone
+
+Everything Backbone does with Collections should Just Work™ with StrictModel as long as you specify a StrictModel constructor as a collection's `model` property.
+
+Besides that and the obvious differences any behavior that doesn't match Backbone should be considered a bug.
 
 ### Explicit model definitions
 
@@ -95,6 +104,37 @@ StrictModel.extend({
 });
 ```
 
+### Going hardcore "strict"
+
+[Strict mode](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions_and_function_scope/Strict_mode) in JS is pretty great and is fairly well supported in modern browsers.
+
+If you want to be *really* hardcore about not letting you set properties that aren't defined, you can specify `seal: true` when defining your model.
+
+```js
+// enable strict mode
+"use strict";
+
+var MySuperStrictModel = Strict.Model.extend({
+    // set this to true
+    seal: true,
+    // normal properties
+    props: {
+        name: 'string'
+    }
+});
+
+// create an instance of this model
+var model = new MySuperStrictModel();
+
+// setting defined properties works like usual
+model.name = 'something';
+
+// BUT, setting a property that doesn't exist
+// will throw an error because the object is sealed.
+model.something = 'something else'; // KABOOM!
+
+```
+
 ### Setting model attributes
 
 ```js
@@ -122,15 +162,18 @@ user.firstName;
 
 Strict inits a global registery for storing all initted models. It's designed to be used for looking up models based on their type, id and optional namespace.
 
-TODO: needs more docs on this
+It's purpose is finding/updating models when we get updates pushed to us from the server. This is very important for buildling realtime apps.
 
+TODO: needs more docs on the registry.
+
+## Tests
+
+An extensive suite of tests can be run by opening `test/index.html` in a browser. In order to ensure compatibility with backbone to the extent possible I started with all the tests from Backbone 1.0.0 and modified them to use StrictModel.
 
 ## Caveats 
 
-- Because it's not based on Backbone's Model prototype adding initted models to a collection will not work as expected because Backbone checks to see if the incoming model is an `instancof Model` which it will never be since it's not inheriting from Backbone's models. So, it require some minor tweaking of Backbone's collection code.
-- There are probably still plenty of bugs. Please use carefully.
-- Needs better docs/more tests.
-
+- Since backbone does an `instanceof` check when adding initted models to a collection, Strict Model monkey patches the `_prepareModel` collection method to check against StrictModel instead.
+- Still needs better docs. Probably a full docs site.
 
 ## Authors
 
