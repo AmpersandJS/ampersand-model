@@ -6,6 +6,7 @@ assert = require('assert');
 var Foo = Strict.Model.extend({
   type: 'foo',
   props: {
+    id: 'number',
     firstName: ['string', true, 'defaults'],
     lastName: ['string', true],
     thing: {
@@ -129,37 +130,22 @@ describe('Strict.Model', function () {
     });
 
     assert.strictEqual(foo.json, '{"firstName":"bob","lastName":"tom","thing":"abc","myBool":false}');
-    assert.deepEqual(foo.keys, [
+    assert.deepEqual(foo.keys(), [
       'firstName',
       'lastName',
       'thing',
-      'num',
-      'today',
-      'hash',
-      'list',
-      'myBool',
-      'id'
+      'myBool'
     ]);
     assert.deepEqual(foo.attributes, {
       firstName: 'bob',
       lastName: 'tom',
       thing: 'abc',
-      num: undefined,
-      today: undefined,
-      hash: undefined,
-      list: undefined,
-      myBool: false,
-      id: undefined
+      myBool: false
     });
     assert.deepEqual(foo.toTemplate, {
       firstName: 'bob',
       lastName: 'tom',
       thing: 'abc',
-      num: undefined,
-      today: undefined,
-      hash: undefined,
-      list: undefined,
-      id: undefined,
       name: 'bob tom',
       initials: 'BT',
       myBool: false
