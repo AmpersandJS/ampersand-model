@@ -193,6 +193,7 @@
     // set the collection if passed in
     if (options.collection) this.collection = options.collection;
     if (options.parse) attrs = this.parse(attrs, options) || {};
+    options._attrs = attrs;
     this._namespace = options.namespace;
     this._initted = false;
     this._deps = {};

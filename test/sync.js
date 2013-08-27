@@ -1,7 +1,16 @@
 $(document).ready(function() {
 
+  var Book = Strict.Model.extend({
+    props: {
+      id: 'string',
+      title: 'string',
+      author: 'string',
+      length: 'number'
+    }
+  });
   var Library = Backbone.Collection.extend({
-    url : function() { return '/library'; }
+    url : function() { return '/library'; },
+    model: Book
   });
   var library;
 
