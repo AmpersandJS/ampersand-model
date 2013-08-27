@@ -187,25 +187,21 @@
   // ------------
 
   var Model = Strict.Model = function (attrs, options) {
-    attrs = attrs || {};
-    options = options || {};
-
-    var modelFound,
-      opts = _.defaults(options || {}, {
-        seal: true
-      });
+    attrs || (attrs = {});
+    options || (options = {});
 
     // set the collection if passed in
-    if (opts.collection) this.collection = opts.collection;
-    if (opts.parse) attrs = this.parse(attrs, options) || {};
-    this._namespace = opts.namespace;
+    if (options.collection) this.collection = options.collection;
+    if (options.parse) attrs = this.parse(attrs, options) || {};
+    this._namespace = options.namespace;
     this._initted = false;
     this._deps = {};
     this._initProperties();
     this._initCollections();
     this._cache = {};
     this._verifyRequired();
-    this.set(attrs, {silent: true});
+    this.set(attrs, _.extend({silent: true}, options));
+    this.changed = {};
     this.initialize.apply(this, arguments);
     if (attrs[this.idAttribute]) Strict.registry.store(this);
     this._initted = true;
@@ -252,6 +248,7 @@
         attr,
         attrs,
         silent,
+        unset,
         val;
 
       // Handle both `"key", value` and `{key: value}` -style arguments.
@@ -268,6 +265,7 @@
       if (!this._validate(attrs, options)) return false;
 
       // Extract attributes and options.
+      unset = options.unset;
       silent = options.silent;
       changes = [];
       changing = this._changing;
@@ -342,31 +340,30 @@
       // actually update our values
       _.each(changes, function (change) {
         self._previousAttributes && (self._previousAttributes[change.key] = change.prev);
-        self.definition[change.key].value = change.val;
+        if (unset) {
+          delete self.definition[change.key].value;
+        } else {
+          self.definition[change.key].value = change.val;
+        }
       });
 
-      _.each(changes, function (change) {
+      if (!silent) {
         if (changes.length) self._pending = true;
-        if (!silent) {
+        _.each(changes, function (change) {
           self.trigger('change:' + change.key, self, self[change.key]);
-        }
-        // TODO: ensure that all deps are not undefined before triggering a change event
-        (self._deps[change.key] || []).forEach(function (derTrigger) {
-          // blow away our cache
-          delete self._cache[derTrigger];
-          if (!silent) self.trigger('change:' + derTrigger, self, self.derived[derTrigger]);
+          (self._deps[change.key] || []).forEach(function (derTrigger) {
+            // blow away our cache
+            delete self._cache[derTrigger];
+            self.trigger('change:' + derTrigger, self, self.derived[derTrigger]);
+          });
         });
-      });
+      }
 
       // You might be wondering why there's a `while` loop here. Changes can
       // be recursively nested within `"change"` events.
-      if (changing) {
-        console.log('returning early');
-        return this;
-      }
+      if (changing) return this;
       if (!silent) {
         while (this._pending) {
-          console.log('trigering main change');
           this._pending = false;
           this.trigger('change', this, options);
         }
@@ -408,11 +405,6 @@
         if (!this._validate(attrs, options)) return false;
       }
 
-      // Set temporary attributes if `{wait: true}`.
-      if (attrs && options.wait) {
-        //this.set(_.extend({}, attributes, attrs), {silent: true});
-      }
-
       // After a successful server-side save, the client is (optionally)
       // updated with the server-side state.
       if (options.parse === void 0) options.parse = true;
@@ -448,7 +440,7 @@
       var model = this;
       var success = options.success;
       options.success = function (resp) {
-        if (!model.set(model.parse(resp, options), options)) return false;
+        //if (!model.set(model.parse(resp, options), options)) return false;
         if (success) success(model, resp, options);
         model.trigger('sync', model, resp, options);
       };
@@ -501,7 +493,7 @@
     changedAttributes: function (diff) {
       if (!diff) return this.hasChanged() ? _.clone(this.changed) : false;
       var val, changed = false;
-      var old = this._changing ? this._previousAttributes : this.attributes;
+      var old = this._changing ? this._previousAttributes : this._getAttributes(true);
       for (var attr in diff) {
         if (_.isEqual(old[attr], (val = diff[attr]))) continue;
         (changed || (changed = {}))[attr] = val;
@@ -516,13 +508,7 @@
     // Returns `true` if the attribute contains a value that is not null
     // or undefined.
     has: function (attr) {
-      var def = this.definition[attr];
-      var val = this.get(attr);
-      if (def && def.type === 'string') {
-        return !!val;
-      } else {
-        return val != null;
-      }
+      return this.get(attr) != null;
     },
 
     // Default URL for the model's representation on the server -- if you're
@@ -564,16 +550,20 @@
       var def = this.definition[attr];
       var type = def.type;
       var val;
-      if (!_.isUndefined(def.default)) {
-        val = def.default;
-      } else if (type === 'string') {
-        val = '';
-      } else if (type === 'object') {
-        val = {};
-      } else if (type === 'array') {
-        val = [];
+      if (def.required) {
+        if (!_.isUndefined(def.default)) {
+          val = def.default;
+        } else if (type === 'string') {
+          val = '';
+        } else if (type === 'object') {
+          val = {};
+        } else if (type === 'array') {
+          val = [];
+        }
+        return this.set(attr, val, options);
+      } else {
+        return this.set(attr, val, _.extend({}, options, {unset: true}));
       }
-      return this.set(attr, val, options);
     },
 
     clear: function (options) {
@@ -693,7 +683,7 @@
 
       // freeze attributes used to define object
       if (this.session) Object.freeze(this.session);
-      //if (this.derived) Object.freeze(this.derived);
+      if (this.derived) Object.freeze(this.derived);
       if (this.props) Object.freeze(this.props);
     },
 
@@ -754,13 +744,11 @@
 
     _getAttributes: function (includeSession, raw) {
       var res = {};
+      var val;
       for (var item in this.definition) {
-        if (!includeSession) {
-          if (!this.definition[item].session) {
-            res[item] = (raw) ? this.definition[item].value : this[item];
-          }
-        } else {
-          res[item] = (raw) ? this.definition[item].value : this[item];
+        if (!(!includeSession && this.definition[item].session)) {
+          val = (raw) ? this.definition[item].value : this[item];
+          if (val !== undefined) res[item] = val;
         }
       }
       return res;

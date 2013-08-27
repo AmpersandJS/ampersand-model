@@ -1,6 +1,6 @@
 $(document).ready(function() {
 
-  var proxy = Backbone.Model.extend({
+  var proxy = Strict.Model.extend({
     props: {
       id: 'string',
       title: 'string',
@@ -31,7 +31,7 @@ $(document).ready(function() {
   }));
 
   test("initialize", 3, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       initialize: function() {
         this.one = 1;
         equal(this.collection, collection);
@@ -43,7 +43,7 @@ $(document).ready(function() {
   });
 
   test("initialize with attributes and options", 1, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       initialize: function(attributes, options) {
         this.one = options.one;
       }
@@ -53,7 +53,7 @@ $(document).ready(function() {
   });
 
   test("initialize with parsed attributes", 1, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         value: 'number'
       },
@@ -66,22 +66,8 @@ $(document).ready(function() {
     equal(model.get('value'), 2);
   });
 
-  /*
-  test("initialize with defaults", 2, function() {
-    var Model = Backbone.Model.extend({
-      defaults: {
-        first_name: 'Unknown',
-        last_name: 'Unknown'
-      }
-    });
-    var model = new Model({'first_name': 'John'});
-    equal(model.get('first_name'), 'John');
-    equal(model.get('last_name'), 'Unknown');
-  });
-  */
-
   test("parse can return null", 1, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         value: 'number'
       },
@@ -105,7 +91,7 @@ $(document).ready(function() {
   });
 
   test("url when using urlRoot, and uri encoding", 2, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         id: 'string'
       },
@@ -118,7 +104,7 @@ $(document).ready(function() {
   });
 
   test("url when using urlRoot as a function to determine urlRoot at runtime", 2, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         id: 'number',
         parent_id: 'number'
@@ -135,7 +121,7 @@ $(document).ready(function() {
   });
 
   test("underscore methods", 5, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         foo: 'string',
         bar: 'string',
@@ -152,7 +138,7 @@ $(document).ready(function() {
   });
 
   test("clone", 9, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         foo: 'number',
         bar: 'number',
@@ -180,7 +166,7 @@ $(document).ready(function() {
   });
 
   test("isNew", 6, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         id: 'number',
         foo: 'number',
@@ -216,8 +202,8 @@ $(document).ready(function() {
     equal(doc.escape('audience'), '');
   });
 
-  test("has", 9, function() {
-    var model = new (Backbone.Model.extend({
+  test("has", 10, function() {
+    var model = new (Strict.Model.extend({
       props: {
         '0': 'number',
         '1': 'number',
@@ -238,24 +224,26 @@ $(document).ready(function() {
       'false': false,
       'empty': '',
       'name': 'name',
-      'null': null
+      'null': null,
+      'undefined': undefined
     });
 
     strictEqual(model.has('0'), true);
     strictEqual(model.has('1'), true);
     strictEqual(model.has('true'), true);
     strictEqual(model.has('false'), true);
-    strictEqual(model.has('empty'), false);
+    strictEqual(model.has('empty'), true);
     strictEqual(model.has('name'), true);
 
     model.unset('name');
 
     strictEqual(model.has('name'), false);
     strictEqual(model.has('null'), false);
+    strictEqual(model.has('undefined'), false);
   });
 
-  test("set and unset", 7, function() {
-    var Model = Backbone.Model.extend({
+  test("set and unset", 8, function() {
+    var Model = Strict.Model.extend({
       props: {
         id: 'string',
         foo: 'number',
@@ -266,7 +254,7 @@ $(document).ready(function() {
     });
     var a = new Model({id: 'id', foo: 1, bar: 2, baz: 3});
     var changeCount = 0;
-    a.on("change", function() { changeCount += 1; });
+    a.on("change:foo", function() { changeCount += 1; });
     a.set({'foo': 2});
     ok(a.get('foo') == 2, "Foo should have changed.");
     ok(changeCount == 1, "Change count should have incremented.");
@@ -275,21 +263,20 @@ $(document).ready(function() {
     ok(changeCount == 1, "Change count should NOT have incremented.");
 
     a.validate = function(attrs) {
-      equal(attrs.extra, '', "validate:true passed while unsetting");
+      equal(attrs.foo, void 0, "validate:true passed while unsetting");
     };
-    a.set('extra', 'something', {validate: false});
-    a.unset('extra', {validate: true});
-    equal(a.get('extra'), '', "Foo should have changed");
+    a.unset('foo', {validate: true});
+    equal(a.get('foo'), void 0, "Foo should have changed");
     delete a.validate;
-    ok(changeCount == 3, "Change count should have incremented for unset.");
+    ok(changeCount == 2, "Change count should have incremented for unset.");
 
-    //a.unset('id');
-    //equal(a.id, undefined, "Unsetting the id should remove the id property.");
+    a.unset('id');
+    equal(a.id, undefined, "Unsetting the id should remove the id property.");
   });
 
   test("#2030 - set with failed validate, followed by another set triggers change", function () {
     var attr = 0, main = 0, error = 0;
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         x: 'number'
       },
@@ -318,24 +305,10 @@ $(document).ready(function() {
     equal(value, 'last');
   });
 
-  /*
-  test("set falsy values in the correct order", 2, function() {
-    var model = new Backbone.Model({result: 'result'});
-    model.on('change', function() {
-      equal(model.changed.result, void 0);
-      equal(model.previous('result'), false);
-    });
-    model.set({result: void 0}, {silent: true});
-    model.set({result: null}, {silent: true});
-    model.set({result: false}, {silent: true});
-    model.set({result: void 0});
-  });
-  */
-
   test("multiple unsets", 1, function() {
     var i = 0;
     var counter = function(){ i++; };
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         a: 'string'
       }
@@ -348,11 +321,10 @@ $(document).ready(function() {
     equal(i, 2, 'Unset does not fire an event for missing attributes.');
   });
 
-  /*
   test("unset and changedAttributes", 1, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
-        a: 'string'
+        a: 'number'
       }
     });
     var model = new Model({a: 1});
@@ -361,10 +333,9 @@ $(document).ready(function() {
     });
     model.unset('a');
   });
-  */
 
   test("using a non-default id attribute.", 3, function() {
-    var MongoModel = Backbone.Model.extend({
+    var MongoModel = Strict.Model.extend({
       props: {
         id: 'string',
         _id: 'number',
@@ -378,16 +349,19 @@ $(document).ready(function() {
     equal(model.isNew(), false);
   });
 
-  /*
   test("set an empty string", 1, function() {
-    var model = new Backbone.Model({name : "Model"});
+    var Model = Strict.Model.extend({
+      props: {
+        name: 'string'
+      }
+    });
+    var model = new Model({name : "Model"});
     model.set({name : ''});
     equal(model.get('name'), '');
   });
-  */
 
   test("setting an object", 1, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         custom: 'object'
       }
@@ -407,7 +381,7 @@ $(document).ready(function() {
   });
 
   test("clear", 2, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         name: 'string',
         id: 'number'
@@ -418,37 +392,17 @@ $(document).ready(function() {
     model.on("change:name", function(){ changed = true; });
     model.clear();
     equal(changed, true);
-    equal(model.get('name'), '');
+    equal(model.get('name'), undefined);
   });
 
-  /*
-  test("defaults", 4, function() {
-    var Defaulted = Backbone.Model.extend({
-      defaults: {
-        "one": 1,
-        "two": 2
-      }
-    });
-    var model = new Defaulted({two: undefined});
-    equal(model.get('one'), 1);
-    equal(model.get('two'), 2);
-    Defaulted = Backbone.Model.extend({
-      defaults: function() {
-        return {
-          "one": 3,
-          "two": 4
-        };
-      }
-    });
-    model = new Defaulted({two: undefined});
-    equal(model.get('one'), 3);
-    equal(model.get('two'), 4);
-  });
-  */
-
-  /*
   test("change, hasChanged, changedAttributes, previous, previousAttributes", 9, function() {
-    var model = new Backbone.Model({name: "Tim", age: 10});
+    var Model = Strict.Model.extend({
+      props: {
+        name: 'string',
+        age: 'number'
+      }
+    });
+    var model = new Model({name: "Tim", age: 10});
     deepEqual(model.changedAttributes(), false);
     model.on('change', function() {
       ok(model.hasChanged('name'), 'name changed');
@@ -464,16 +418,21 @@ $(document).ready(function() {
   });
 
   test("changedAttributes", 3, function() {
-    var model = new Backbone.Model({a: 'a', b: 'b'});
+    var Model = Strict.Model.extend({
+      props: {
+        a: 'string',
+        b: 'string'
+      }
+    });
+    var model = new Model({a: 'a', b: 'b'});
     deepEqual(model.changedAttributes(), false);
     equal(model.changedAttributes({a: 'a'}), false);
     equal(model.changedAttributes({a: 'b'}).a, 'b');
   });
-  */
 
   test("change with options", 2, function() {
     var value;
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         name: 'string'
       }
@@ -490,7 +449,7 @@ $(document).ready(function() {
 
   test("change after initialize", 1, function () {
     var changed = 0;
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         id: 'number',
         label: 'string'
@@ -505,7 +464,7 @@ $(document).ready(function() {
 
   test("save within change event", 1, function () {
     var env = this;
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         firstName: 'string',
         lastName: 'string'
@@ -544,7 +503,7 @@ $(document).ready(function() {
   });
 
   test("save, fetch, destroy triggers error event when an error occurs", 3, function () {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         data: 'number',
         id: 'number'
@@ -563,7 +522,7 @@ $(document).ready(function() {
   });
 
   test("save with PATCH", function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         id: 'number',
         title: 'string',
@@ -601,7 +560,7 @@ $(document).ready(function() {
   });
 
   test("save in positional style", 1, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         title: 'string'
       }
@@ -615,7 +574,7 @@ $(document).ready(function() {
   });
 
   test("save with non-object success response", 2, function () {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         testing: 'string'
       }
@@ -648,7 +607,7 @@ $(document).ready(function() {
   });
 
   test("non-persisted destroy", 1, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         foo: 'number',
         bar: 'number',
@@ -663,7 +622,7 @@ $(document).ready(function() {
 
   test("validate", function() {
     var lastError;
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         admin: ['boolean', true, true],
         a: 'number'
@@ -690,7 +649,7 @@ $(document).ready(function() {
 
   test("validate on unset and clear", 6, function() {
     var error;
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         name: 'string'
       }
@@ -712,12 +671,12 @@ $(document).ready(function() {
     equal(model.get('name'), 'Two');
     delete model.validate;
     model.clear();
-    equal(model.get('name'), '');
+    equal(model.get('name'), undefined);
   });
 
   test("validate with error callback", 8, function() {
     var lastError, boundError;
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         a: 'number',
         admin: 'boolean'
@@ -742,21 +701,8 @@ $(document).ready(function() {
     equal(boundError, true);
   });
 
-  /*
-  test("defaults always extend attrs (#459)", 2, function() {
-    var Defaulted = Backbone.Model.extend({
-      defaults: {one: 1},
-      initialize : function(attrs, opts) {
-        equal(this.attributes.one, 1);
-      }
-    });
-    var providedattrs = new Defaulted({});
-    var emptyattrs = new Defaulted();
-  });
-  */
-
   test("Inherit class properties", 6, function() {
-    var Parent = Backbone.Model.extend({
+    var Parent = Strict.Model.extend({
       instancePropSame: function() {},
       instancePropDiff: function() {}
     }, {
@@ -780,7 +726,7 @@ $(document).ready(function() {
   });
 
   test("Nested change events don't clobber previous attributes", 4, function() {
-    new (Backbone.Model.extend({props: {state: 'string', other: 'string'}}))()
+    new (Strict.Model.extend({props: {state: 'string', other: 'string'}}))()
     .on('change:state', function(model, newState) {
       equal(model.previous('state'), undefined);
       equal(newState, 'hello');
@@ -794,22 +740,26 @@ $(document).ready(function() {
     .set({state: 'hello'});
   });
 
-  /*
   test("hasChanged/set should use same comparison", 2, function() {
-    var changed = 0, model = new Backbone.Model({a: null});
+    var changed = 0;
+    var Model = Strict.Model.extend({
+      props: {
+        a: 'string'
+      }
+    })
+    var model = new Model({a: 'something'});
     model.on('change', function() {
       ok(this.hasChanged('a'));
     })
     .on('change:a', function() {
       changed++;
     })
-    .set({a: undefined});
+    .set({a: 'else'});
     equal(changed, 1);
   });
-  */
 
   test("#582, #425, change:attribute callbacks should fire after all changes have occurred", 9, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         a: 'string',
         b: 'string',
@@ -831,25 +781,8 @@ $(document).ready(function() {
     model.set({a: 'a', b: 'b', c: 'c'});
   });
 
-  /*
-  test("#871, set with attributes property", 1, function() {
-    var model = new Backbone.Model();
-    model.set({attributes: true});
-    ok(model.has('attributes'));
-  });
-  */
-
-  /*
-  test("set value regardless of equality/change", 1, function() {
-    var model = new Backbone.Model({x: []});
-    var a = [];
-    model.set({x: a});
-    ok(model.get('x') === a);
-  });
-  */
-
   test("set same value does not trigger change", 0, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         x: 'number'
       }
@@ -861,7 +794,7 @@ $(document).ready(function() {
   });
 
   test("unset does not fire a change for undefined attributes", 0, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         x: 'number'
       }
@@ -871,15 +804,8 @@ $(document).ready(function() {
     model.unset('x');
   });
 
-  /*
-  test("set: undefined values", 1, function() {
-    var model = new Backbone.Model({x: undefined});
-    ok('x' in model.attributes);
-  });
-  */
-
   test("hasChanged works outside of change events, and true within", 6, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         x: 'number'
       }
@@ -898,7 +824,7 @@ $(document).ready(function() {
   });
 
   test("hasChanged gets cleared on the following set", 4, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         x: 'number'
       }
@@ -915,7 +841,7 @@ $(document).ready(function() {
   });
 
   test("save with `wait` succeeds without `validate`", 1, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         x: 'number'
       }
@@ -943,7 +869,7 @@ $(document).ready(function() {
   });
 
   test("`hasChanged` for falsey keys", 2, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         x: 'boolean'
       }
@@ -955,7 +881,7 @@ $(document).ready(function() {
   });
 
   test("`previous` for falsey keys", 2, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         0: 'boolean',
         '': 'boolean'
@@ -969,7 +895,7 @@ $(document).ready(function() {
 
   test("`save` with `wait` sends correct attributes", 5, function() {
     var changed = 0;
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         x: 'number',
         y: 'number'
@@ -988,7 +914,7 @@ $(document).ready(function() {
   });
 
   test("a failed `save` with `wait` doesn't leave attributes behind", 1, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         x: 'number'
       }
@@ -1000,7 +926,7 @@ $(document).ready(function() {
   });
 
   test("#1030 - `save` with `wait` results in correct attributes if success is called during sync", 2, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         x: 'number',
         y: 'number'
@@ -1023,7 +949,7 @@ $(document).ready(function() {
   });
 
   test("save turns on parse flag", function () {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       sync: function(method, model, options) { ok(options.parse); }
     });
     new Model().save();
@@ -1031,7 +957,7 @@ $(document).ready(function() {
 
   test("nested `set` during `'change:attr'`", 2, function() {
     var events = [];
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       props: {
         x: 'boolean',
         y: 'boolean',
@@ -1046,9 +972,7 @@ $(document).ready(function() {
     model.on('change:x', function() {
       model.set({y: true});
     });
-    console.log('setting x');
     model.set({x: true});
-    console.log('set x');
     deepEqual(events, ['change:y', 'change:x', 'change']);
     events = [];
     model.set({z: true});
@@ -1056,7 +980,7 @@ $(document).ready(function() {
   });
 
   test("nested `change` only fires once", 1, function() {
-    var model = new Backbone.Model();
+    var model = new (Strict.Model.extend({props: {x: 'boolean'}}))();
     model.on('change', function() {
       ok(true);
       model.set({x: true});
@@ -1066,7 +990,14 @@ $(document).ready(function() {
 
   test("nested `set` during `'change'`", 6, function() {
     var count = 0;
-    var model = new Backbone.Model();
+    var Model = Strict.Model.extend({
+      props: {
+        x: 'boolean',
+        y: 'boolean',
+        z: 'boolean'
+      }
+    });
+    var model = new Model();
     model.on('change', function() {
       switch(count++) {
         case 0:
@@ -1092,7 +1023,14 @@ $(document).ready(function() {
 
   test("nested `change` with silent", 3, function() {
     var count = 0;
-    var model = new Backbone.Model();
+    var Model = Strict.Model.extend({
+      props: {
+        x: 'boolean',
+        y: 'boolean',
+        z: 'boolean'
+      }
+    });
+    var model = new Model();
     model.on('change:y', function() { ok(false); });
     model.on('change', function() {
       switch(count++) {
@@ -1116,7 +1054,14 @@ $(document).ready(function() {
   });
 
   test("nested `change:attr` with silent", 0, function() {
-    var model = new Backbone.Model();
+    var Model = Strict.Model.extend({
+      props: {
+        x: 'boolean',
+        y: 'boolean',
+        z: 'boolean'
+      }
+    });
+    var model = new Model();
     model.on('change:y', function(){ ok(false); });
     model.on('change', function() {
       model.set({y: true}, {silent: true});
@@ -1126,7 +1071,13 @@ $(document).ready(function() {
   });
 
   test("multiple nested changes with silent", 1, function() {
-    var model = new Backbone.Model();
+    var Model = Strict.Model.extend({
+      props: {
+        x: 'boolean',
+        y: 'number'
+      }
+    });
+    var model = new Model();
     model.on('change:x', function() {
       model.set({y: 1}, {silent: true});
       model.set({y: 2});
@@ -1139,7 +1090,12 @@ $(document).ready(function() {
 
   test("multiple nested changes with silent", 1, function() {
     var changes = [];
-    var model = new Backbone.Model();
+    var Model = Strict.Model.extend({
+      props: {
+        b: 'number'
+      }
+    });
+    var model = new Model();
     model.on('change:b', function(model, val) { changes.push(val); });
     model.on('change', function() {
       model.set({b: 1});
@@ -1149,7 +1105,12 @@ $(document).ready(function() {
   });
 
   test("basic silent change semantics", 1, function() {
-    var model = new Backbone.Model;
+    var Model = Strict.Model.extend({
+      props: {
+        x: 'number'
+      }
+    });
+    var model = new Model;
     model.set({x: 1});
     model.on('change', function(){ ok(true); });
     model.set({x: 2}, {silent: true});
@@ -1157,7 +1118,13 @@ $(document).ready(function() {
   });
 
   test("nested set multiple times", 1, function() {
-    var model = new Backbone.Model();
+    var Model = Strict.Model.extend({
+      props: {
+        a: 'boolean',
+        b: 'boolean'
+      }
+    });
+    var model = new Model();
     model.on('change:b', function() {
       ok(true);
     });
@@ -1176,16 +1143,26 @@ $(document).ready(function() {
   });
 
   test("#1122 - unset does not alter options.", 1, function() {
-    var model = new Backbone.Model();
+    var Model = Strict.Model.extend({
+      props: {
+        x: 'number'
+      }
+    });
+    var model = new Model();
     var options = {};
     model.unset('x', options);
     ok(!options.unset);
   });
 
   test("#1355 - `options` is passed to success callbacks", 3, function() {
-    var model = new Backbone.Model();
+    var Model = Strict.Model.extend({
+      props: {
+        id: 'number'
+      }
+    });
+    var model = new Model();
     var opts = {
-      success: function( model, resp, options ) {
+      success: function(model, resp, options) {
         ok(options);
       }
     };
@@ -1198,7 +1175,12 @@ $(document).ready(function() {
   });
 
   test("#1412 - Trigger 'sync' event.", 3, function() {
-    var model = new Backbone.Model({id: 1});
+    var Model = Strict.Model.extend({
+      props: {
+        id: 'number'
+      }
+    });
+    var model = new Model({id: 1});
     model.sync = function (method, model, options) { options.success(); };
     model.on('sync', function(){ ok(true); });
     model.fetch();
@@ -1221,7 +1203,10 @@ $(document).ready(function() {
   });
 
   test("#1377 - Save without attrs triggers 'error'.", 1, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
+      props: {
+        id: 'number'
+      },
       url: '/test/',
       sync: function(method, model, options){ options.success(); },
       validate: function(){ return 'invalid'; }
@@ -1232,7 +1217,7 @@ $(document).ready(function() {
   });
 
   test("#1545 - `undefined` can be passed to a model constructor without coersion", function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       defaults: { one: 1 },
       initialize : function(attrs, opts) {
         equal(attrs, undefined);
@@ -1243,7 +1228,10 @@ $(document).ready(function() {
   });
 
   asyncTest("#1478 - Model `save` does not trigger change on unchanged attributes", 0, function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
+      props: {
+        x: 'boolean'
+      },
       sync: function(method, model, options) {
         setTimeout(function(){
           options.success();
@@ -1257,7 +1245,12 @@ $(document).ready(function() {
   });
 
   test("#1664 - Changing from one value, silently to another, back to original triggers a change.", 1, function() {
-    var model = new Backbone.Model({x:1});
+    var Model = Strict.Model.extend({
+      props: {
+        x: 'number'
+      }
+    });
+    var model = new Model({x:1});
     model.on('change:x', function() { ok(true); });
     model.set({x:2},{silent:true});
     model.set({x:3},{silent:true});
@@ -1266,10 +1259,17 @@ $(document).ready(function() {
 
   test("#1664 - multiple silent changes nested inside a change event", 2, function() {
     var changes = [];
-    var model = new Backbone.Model();
+    var Model = Strict.Model.extend({
+      props: {
+        a: 'string',
+        b: 'number',
+        c: 'string'
+      }
+    });
+    var model = new Model();
     model.on('change', function() {
-      model.set({a:'c'}, {silent:true});
-      model.set({b:2}, {silent:true});
+      model.set({a: 'c'}, {silent:true});
+      model.set({b: 2}, {silent:true});
       model.unset('c', {silent:true});
     });
     model.on('change:a change:b change:c', function(model, val) { changes.push(val); });
@@ -1279,7 +1279,7 @@ $(document).ready(function() {
   });
 
   test("#1791 - `attributes` is available for `parse`", function() {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
       parse: function() { this.has('a'); } // shouldn't throw an error
     });
     var model = new Model(null, {parse: true});
@@ -1288,7 +1288,12 @@ $(document).ready(function() {
 
   test("silent changes in last `change` event back to original triggers change", 2, function() {
     var changes = [];
-    var model = new Backbone.Model();
+    var Model = Strict.Model.extend({
+      props: {
+        a: 'string'
+      }
+    });
+    var model = new Model();
     model.on('change:a change:b change:c', function(model, val) { changes.push(val); });
     model.on('change', function() {
       model.set({a:'c'}, {silent:true});
@@ -1300,13 +1305,23 @@ $(document).ready(function() {
   });
 
   test("#1943 change calculations should use _.isEqual", function() {
-    var model = new Backbone.Model({a: {key: 'value'}});
+    var Model = Strict.Model.extend({
+      props: {
+        a: 'object'
+      }
+    });
+    var model = new Model({a: {key: 'value'}});
     model.set('a', {key:'value'}, {silent:true});
     equal(model.changedAttributes(), false);
   });
 
   test("#1964 - final `change` event is always fired, regardless of interim changes", 1, function () {
-    var model = new Backbone.Model();
+    var Model = Strict.Model.extend({
+      props: {
+        property: 'string'
+      }
+    });
+    var model = new Model();
     model.on('change:property', function() {
       model.set('property', 'bar');
     });
@@ -1317,7 +1332,12 @@ $(document).ready(function() {
   });
 
   test("isValid", function() {
-    var model = new Backbone.Model({valid: true});
+    var Model = Strict.Model.extend({
+      props: {
+        valid: 'boolean'
+      }
+    });
+    var model = new Model({valid: true});
     model.validate = function(attrs) {
       if (!attrs.valid) return "invalid";
     };
@@ -1336,7 +1356,10 @@ $(document).ready(function() {
   });
 
   test("#1961 - Creating a model with {validate:true} will call validate and use the error callback", function () {
-    var Model = Backbone.Model.extend({
+    var Model = Strict.Model.extend({
+      props: {
+        id: 'number'
+      },
       validate: function (attrs) {
         if (attrs.id === 1) return "This shouldn't happen";
       }
@@ -1345,20 +1368,14 @@ $(document).ready(function() {
     equal(model.validationError, "This shouldn't happen");
   });
 
-  test("toJSON receives attrs during save(..., {wait: true})", 1, function() {
-    var Model = Backbone.Model.extend({
-      url: '/test',
-      toJSON: function() {
-        strictEqual(this.attributes.x, 1);
-        return _.clone(this.attributes);
+  test("#2034 - nested set with silent only triggers one change", 1, function() {
+    var Model = Strict.Model.extend({
+      props: {
+        a: 'boolean',
+        b: 'boolean'
       }
     });
-    var model = new Model;
-    model.save({x: 1}, {wait: true});
-  });
-
-  test("#2034 - nested set with silent only triggers one change", 1, function() {
-    var model = new Backbone.Model();
+    var model = new Model();
     model.on('change', function() {
       model.set({b: true}, {silent: true});
       ok(true);
