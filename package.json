@@ -1,6 +1,6 @@
 {
     "name": "strictmodel",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "author": "Henrik Joreteg <henrik@andyet.net>",
     "contributors": [{
         "name": "Beau Sorensen"
@@ -10,10 +10,11 @@
         "underscore": "1.4.4"
     },
     "devDependencies": {
-        "precommit-hook": "0.3.4"
+        "precommit-hook": "0.3.4",
+        "uglify-js": "2.4.0"
     },
     "scripts": {
-        "min": "make min"
+        "build": "node build.js"
     },
     "main": "./strictmodel.js",
     "browser": "./strictmodel.js"
