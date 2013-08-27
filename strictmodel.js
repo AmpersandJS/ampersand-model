@@ -208,7 +208,6 @@
     this.set(attrs, {silent: true});
     this.initialize.apply(this, arguments);
     if (attrs[this.idAttribute]) Strict.registry.store(this);
-    this._previous = _.clone(this.attributes); // Should this be set right away?
     this._initted = true;
   };
 
@@ -226,7 +225,7 @@
     },
 
     // backbone compatibility
-    parse: function(resp, options) {
+    parse: function (resp, options) {
       return resp;
     },
 
@@ -242,19 +241,18 @@
 
     set: function (key, value, options) {
       var self = this,
-        changing = self._changing,
-        opts,
-        changes = [],
+        changing,
+        current,
+        previous,
+        changes,
         newType,
         interpretedType,
         newVal,
         def,
         attr,
         attrs,
-        val,
-        changesHash;
-
-      self._changing = true;
+        silent,
+        val;
 
       // Handle both `"key", value` and `{key: value}` -style arguments.
       if (_.isObject(key) || key === null) {
@@ -265,7 +263,23 @@
         attrs[key] = value;
       }
 
-      opts = _.extend({validate: true}, options);
+      options = options || {};
+
+      if (!this._validate(attrs, options)) return false;
+
+      // Extract attributes and options.
+      silent = options.silent;
+      changes = [];
+      changing = this._changing;
+      this._changing  = true;
+
+      // if not already changing, store previous
+      if (!changing) {
+        this._previousAttributes = this._getAttributes(true);
+        this.changed = {};
+      }
+      current = this.attributes;
+      previous = this._previousAttributes;
 
       // For each `set` attribute...
       for (attr in attrs) {
@@ -316,42 +330,49 @@
         if (!_.isEqual(def.value, newVal)) {
           changes.push({prev: def.value, val: newVal, key: attr});
         }
-      }
 
-      // run validation if specified
-      if (opts.validate) {
-        changesHash = {};
-        changes.forEach(function (change) {
-          changesHash[change.key] = change.val;
-        });
-        if (!this._validate(changesHash, opts)) {
-          return false;
+        // keep track of changed attributes
+        if (!_.isEqual(previous[attr], val)) {
+          self.changed[attr] = val;
+        } else {
+          delete self.changed[attr];
         }
       }
 
       // actually update our values
       _.each(changes, function (change) {
-        self._previous && (self._previous[change.key] = change.prev);
+        self._previousAttributes && (self._previousAttributes[change.key] = change.prev);
         self.definition[change.key].value = change.val;
       });
 
       _.each(changes, function (change) {
-        if (!opts.silent) {
+        if (changes.length) self._pending = true;
+        if (!silent) {
           self.trigger('change:' + change.key, self, self[change.key]);
         }
         // TODO: ensure that all deps are not undefined before triggering a change event
         (self._deps[change.key] || []).forEach(function (derTrigger) {
           // blow away our cache
           delete self._cache[derTrigger];
-          if (!opts.silent) self.trigger('change:' + derTrigger, self, self.derived[derTrigger]);
+          if (!silent) self.trigger('change:' + derTrigger, self, self.derived[derTrigger]);
         });
       });
 
-      // fire general change events
-      if (changes.length) {
-        if (!opts.silent) self.trigger('change', self, options);
+      // You might be wondering why there's a `while` loop here. Changes can
+      // be recursively nested within `"change"` events.
+      if (changing) {
+        console.log('returning early');
+        return this;
       }
-
+      if (!silent) {
+        while (this._pending) {
+          console.log('trigering main change');
+          this._pending = false;
+          this.trigger('change', this, options);
+        }
+      }
+      this._pending = false;
+      this._changing = false;
       return this;
     },
 
@@ -359,7 +380,13 @@
       return this[attr];
     },
 
-    save: function(key, val, options) {
+    // Get all of the attributes of the model at the time of the previous
+    // `"change"` event.
+    previousAttributes: function () {
+      return _.clone(this._previousAttributes);
+    },
+
+    save: function (key, val, options) {
       var attrs, method, xhr, attributes = this.attributes;
 
       // Handle both `"key", value` and `{key: value}` -style arguments.
@@ -383,7 +410,7 @@
 
       // Set temporary attributes if `{wait: true}`.
       if (attrs && options.wait) {
-        this.set(_.extend({}, attributes, attrs), {silent: true});
+        //this.set(_.extend({}, attributes, attrs), {silent: true});
       }
 
       // After a successful server-side save, the client is (optionally)
@@ -391,9 +418,7 @@
       if (options.parse === void 0) options.parse = true;
       var model = this;
       var success = options.success;
-      options.success = function(resp) {
-        // Ensure attributes are restored during synchronous saves.
-        if (options.wait) model.set(attributes, {silent: true});
+      options.success = function (resp) {
         var serverAttrs = model.parse(resp, options);
         if (options.wait) serverAttrs = _.extend(attrs || {}, serverAttrs);
         if (_.isObject(serverAttrs) && !model.set(serverAttrs, options)) {
@@ -406,10 +431,10 @@
 
       method = this.isNew() ? 'create' : (options.patch ? 'patch' : 'update');
       if (method === 'patch') options.attrs = attrs;
+      // if we're waiting we haven't actually set our attributes yet so
+      // we need to do make sure we send right data
+      if (options.wait) options.attrs = _.extend(model.attributes, attrs);
       xhr = this.sync(method, this, options);
-
-      // Restore attributes.
-      if (attrs && options.wait) this.attributes = attributes;
 
       return xhr;
     },
@@ -417,12 +442,12 @@
     // Fetch the model from the server. If the server's representation of the
     // model differs from its current attributes, they will be overridden,
     // triggering a `"change"` event.
-    fetch: function(options) {
+    fetch: function (options) {
       options = options ? _.clone(options) : {};
       if (options.parse === void 0) options.parse = true;
       var model = this;
       var success = options.success;
-      options.success = function(resp) {
+      options.success = function (resp) {
         if (!model.set(model.parse(resp, options), options)) return false;
         if (success) success(model, resp, options);
         model.trigger('sync', model, resp, options);
@@ -434,16 +459,16 @@
     // Destroy this model on the server if it was already persisted.
     // Optimistically removes the model from its collection, if it has one.
     // If `wait: true` is passed, waits for the server to respond before removal.
-    destroy: function(options) {
+    destroy: function (options) {
       options = options ? _.clone(options) : {};
       var model = this;
       var success = options.success;
 
-      var destroy = function() {
+      var destroy = function () {
         model.trigger('destroy', model, model.collection, options);
       };
 
-      options.success = function(resp) {
+      options.success = function (resp) {
         if (options.wait || model.isNew()) destroy();
         if (success) success(model, resp, options);
         if (!model.isNew()) model.trigger('sync', model, resp, options);
@@ -460,13 +485,37 @@
       return xhr;
     },
 
+    // Determine if the model has changed since the last `"change"` event.
+    // If you specify an attribute name, determine if that attribute has changed.
+    hasChanged: function (attr) {
+      if (attr == null) return !_.isEmpty(this.changed);
+      return _.has(this.changed, attr);
+    },
+
+    // Return an object containing all the attributes that have changed, or
+    // false if there are no changed attributes. Useful for determining what
+    // parts of a view need to be updated and/or what attributes need to be
+    // persisted to the server. Unset attributes will be set to undefined.
+    // You can also pass an attributes object to diff against the model,
+    // determining if there *would be* a change.
+    changedAttributes: function (diff) {
+      if (!diff) return this.hasChanged() ? _.clone(this.changed) : false;
+      var val, changed = false;
+      var old = this._changing ? this._previousAttributes : this.attributes;
+      for (var attr in diff) {
+        if (_.isEqual(old[attr], (val = diff[attr]))) continue;
+        (changed || (changed = {}))[attr] = val;
+      }
+      return changed;
+    },
+
     toJSON: function () {
       return this.attributes;
     },
 
     // Returns `true` if the attribute contains a value that is not null
     // or undefined.
-    has: function(attr) {
+    has: function (attr) {
       var def = this.definition[attr];
       var val = this.get(attr);
       if (def && def.type === 'string') {
@@ -479,14 +528,14 @@
     // Default URL for the model's representation on the server -- if you're
     // using Backbone's restful methods, override this to change the endpoint
     // that will be called.
-    url: function() {
+    url: function () {
       var base = _.result(this, 'urlRoot') || _.result(this.collection, 'url') || urlError();
       if (this.isNew()) return base;
       return base + (base.charAt(base.length - 1) === '/' ? '' : '/') + encodeURIComponent(this.getId());
     },
 
     // A model is new if it has never been saved to the server, and lacks an id.
-    isNew: function() {
+    isNew: function () {
       return this.getId() == null;
     },
 
@@ -496,18 +545,18 @@
     },
 
     // Check if the model is currently in a valid state.
-    isValid: function(options) {
+    isValid: function (options) {
       return this._validate({}, _.extend(options || {}, { validate: true }));
     },
 
     // return escaped property
-    escape: function(attr) {
+    escape: function (attr) {
       return _.escape(this[attr]);
     },
 
     // Proxy `Backbone.sync` by default -- but override this if you need
     // custom syncing semantics for *this* particular model.
-    sync: function() {
+    sync: function () {
       return Backbone.sync.apply(this, arguments);
     },
 
@@ -527,17 +576,17 @@
       return this.set(attr, val, options);
     },
 
-    clear: function () {
+    clear: function (options) {
       var self = this;
       _.each(this._getAttributes(true), function (val, key) {
-        self.unset(key);
+        self.unset(key, options);
       });
       return this;
     },
 
     // Run validation against the next complete set of model attributes,
     // returning `true` if all is well. Otherwise, fire an `"invalid"` event.
-    _validate: function(attrs, options) {
+    _validate: function (attrs, options) {
       if (!options.validate || !this.validate) return true;
       attrs = _.extend({}, this.attributes, attrs);
       var error = this.validationError = this.validate(attrs, options) || null;
@@ -557,7 +606,8 @@
     },
 
     previous: function (attr) {
-      return attr ? this._previous[attr] : _.clone(this._previous);
+      if (attr == null || !this._previousAttributes) return null;
+      return this._previousAttributes[attr];
     },
 
     removeListVal: function (prop, value) {
@@ -761,8 +811,8 @@
   var modelMethods = ['keys', 'values', 'pairs', 'invert', 'pick', 'omit'];
 
   // Mix in each Underscore method as a proxy to `Model#attributes`.
-  _.each(modelMethods, function(method) {
-    Model.prototype[method] = function() {
+  _.each(modelMethods, function (method) {
+    Model.prototype[method] = function () {
       var args = slice.call(arguments);
       args.unshift(this.attributes);
       return _[method].apply(_, args);
@@ -778,16 +828,16 @@
   Backbone.Model = Strict.Model;
 
   // Wrap an optional error callback with a fallback error event.
-  var wrapError = function(model, options) {
+  var wrapError = function (model, options) {
     var error = options.error;
-    options.error = function(resp) {
+    options.error = function (resp) {
       if (error) error(model, resp, options);
       model.trigger('error', model, resp, options);
     };
   };
 
   // Throw an error when a URL is needed, and none is supplied.
-  var urlError = function() {
+  var urlError = function () {
     throw new Error('A "url" property or function must be specified');
   };
 

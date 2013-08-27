@@ -879,7 +879,12 @@ $(document).ready(function() {
   */
 
   test("hasChanged works outside of change events, and true within", 6, function() {
-    var model = new Backbone.Model({x: 1});
+    var Model = Backbone.Model.extend({
+      props: {
+        x: 'number'
+      }
+    });
+    var model = new Model({x: 1});
     model.on('change:x', function() {
       ok(model.hasChanged('x'));
       equal(model.get('x'), 1);
@@ -893,7 +898,12 @@ $(document).ready(function() {
   });
 
   test("hasChanged gets cleared on the following set", 4, function() {
-    var model = new Backbone.Model;
+    var Model = Backbone.Model.extend({
+      props: {
+        x: 'number'
+      }
+    });
+    var model = new Model;
     model.set({x: 1});
     ok(model.hasChanged());
     model.set({x: 1});
@@ -905,7 +915,12 @@ $(document).ready(function() {
   });
 
   test("save with `wait` succeeds without `validate`", 1, function() {
-    var model = new Backbone.Model();
+    var Model = Backbone.Model.extend({
+      props: {
+        x: 'number'
+      }
+    });
+    var model = new Model();
     model.url = '/test';
     model.save({x: 1}, {wait: true});
     ok(this.syncArgs.model === model);
@@ -928,14 +943,25 @@ $(document).ready(function() {
   });
 
   test("`hasChanged` for falsey keys", 2, function() {
-    var model = new Backbone.Model();
+    var Model = Backbone.Model.extend({
+      props: {
+        x: 'boolean'
+      }
+    });
+    var model = new Model();
     model.set({x: true}, {silent: true});
     ok(!model.hasChanged(0));
     ok(!model.hasChanged(''));
   });
 
   test("`previous` for falsey keys", 2, function() {
-    var model = new Backbone.Model({0: true, '': true});
+    var Model = Backbone.Model.extend({
+      props: {
+        0: 'boolean',
+        '': 'boolean'
+      }
+    });
+    var model = new Model({0: true, '': true});
     model.set({0: false, '': false}, {silent: true});
     equal(model.previous(0), true);
     equal(model.previous(''), true);
@@ -943,7 +969,13 @@ $(document).ready(function() {
 
   test("`save` with `wait` sends correct attributes", 5, function() {
     var changed = 0;
-    var model = new Backbone.Model({x: 1, y: 2});
+    var Model = Backbone.Model.extend({
+      props: {
+        x: 'number',
+        y: 'number'
+      }
+    });
+    var model = new Model({x: 1, y: 2});
     model.url = '/test';
     model.on('change:x', function() { changed++; });
     model.save({x: 3}, {wait: true});
@@ -956,14 +988,25 @@ $(document).ready(function() {
   });
 
   test("a failed `save` with `wait` doesn't leave attributes behind", 1, function() {
-    var model = new Backbone.Model;
+    var Model = Backbone.Model.extend({
+      props: {
+        x: 'number'
+      }
+    });
+    var model = new Model;
     model.url = '/test';
     model.save({x: 1}, {wait: true});
     equal(model.get('x'), void 0);
   });
 
   test("#1030 - `save` with `wait` results in correct attributes if success is called during sync", 2, function() {
-    var model = new Backbone.Model({x: 1, y: 2});
+    var Model = Backbone.Model.extend({
+      props: {
+        x: 'number',
+        y: 'number'
+      }
+    });
+    var model = new Model({x: 1, y: 2});
     model.sync = function(method, model, options) {
       options.success();
     };
@@ -988,7 +1031,14 @@ $(document).ready(function() {
 
   test("nested `set` during `'change:attr'`", 2, function() {
     var events = [];
-    var model = new Backbone.Model();
+    var Model = Backbone.Model.extend({
+      props: {
+        x: 'boolean',
+        y: 'boolean',
+        z: 'boolean'
+      }
+    });
+    var model = new Model();
     model.on('all', function(event) { events.push(event); });
     model.on('change', function() {
       model.set({z: true}, {silent:true});
@@ -996,7 +1046,9 @@ $(document).ready(function() {
     model.on('change:x', function() {
       model.set({y: true});
     });
+    console.log('setting x');
     model.set({x: true});
+    console.log('set x');
     deepEqual(events, ['change:y', 'change:x', 'change']);
     events = [];
     model.set({z: true});
