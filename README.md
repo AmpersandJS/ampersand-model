@@ -1,4 +1,4 @@
-# Human Model
+# human-model
 
 Human Models are meant to work as a drop-in replacement for Backbone models. In fact, it's extensively tested against the unit tests from Backbone (open test/index.html to run). 
 
