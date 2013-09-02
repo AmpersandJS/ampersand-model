@@ -16,7 +16,7 @@ $(function() {
             required: true,
             default: 'hi'
           },
-          num: ['number'],
+          num: ['number', true],
           today: ['date'],
           hash: ['object'],
           list: ['array'],
@@ -37,6 +37,12 @@ $(function() {
                 return (this.firstName.charAt(0) + this.lastName.charAt(0)).toUpperCase();
               }
               return '';
+            }
+          },
+          isCrazy: {
+            deps: ['crazyPerson'],
+            fn: function () {
+              return !!this.crazyPerson;
             }
           }
         }
@@ -90,6 +96,26 @@ $(function() {
     strictEqual(foo.thing, 'hi');
   });
 
+  test('Setting other properties without explicit permission throws error', 1, function () {
+    var foo = new Foo();
+    throws(function () {
+      foo.set({
+        craziness: 'new'
+      });
+    }, Error, 'Throws exception unless allowed');
+  });
+
+  test('Setting other properties is ok if allowOtherProperties is true', 1, function () {
+    var foo = new Foo();
+    foo.allowOtherProperties = true;
+    foo.set({
+      craziness: 'new'
+    });
+    window.foo = foo;
+    //debugger;
+    equal(foo.get('craziness'), 'new');
+  });
+
   test('should throw a type error for bad data types', function () {
     try { new Foo({firstName: 3}); }
     catch (err) { ok(err instanceof TypeError); }
@@ -107,13 +133,14 @@ $(function() {
     catch (err) { ok(err instanceof TypeError); }
   });
 
-  test('should validate model', function () {
+  test('should validate model', 2, function () {
     var foo = new Foo();
     equal(foo._verifyRequired(), false);
 
     foo.firstName = 'a';
     foo.lastName = 'b';
     foo.thing = 'abc';
+    foo.num = 12;
     ok(foo._verifyRequired());
   });
 
@@ -166,17 +193,42 @@ $(function() {
       lastName: 'tom',
       thing: 'abc',
       name: 'bob tom',
+      isCrazy: false,
       initials: 'BT',
       myBool: false
     });
   });
 
-  test('should fire change event for specific attribute', 1, function (next) {
-    var foo = new Foo({firstName: 'coffee'});
-    foo.on('change:firstName', function () {
+  test('should fire events normally for properties defined on the fly', 1, function (next) {
+    var foo = new Foo();
+    foo.allowOtherProperties = true;
+    foo.on('change:crazyPerson', function () {
       ok(true);
     });
-    foo.firstName = 'bob';
+    foo.set({
+      crazyPerson: true
+    });
+  });
+
+  test('should fire event on derived properties, even if dependent on ad hoc prop.', 1, function () {
+    var Foo = new Strict.Model.extend({
+      allowOtherProperties: true,
+      derived: {
+        isCrazy: {
+          deps: ['crazyPerson'],
+          fn: function () {
+            return !!this.crazyPerson;
+          }
+        }
+      }
+    });
+    foo.allowOtherProperties = true;
+    foo.on('change:isCrazy', function () {
+      ok(true);
+    });
+    foo.set({
+      crazyPerson: true
+    });
   });
 
   test('should fire general change event on single attribute', 1, function (next) {
@@ -196,6 +248,90 @@ $(function() {
       firstName: 'roger',
       lastName: 'smells'
     });
+  });
+
+  test('derived properties', function () {
+    var ran = 0;
+    var notCachedRan = 0;
+    var Foo = Strict.Model.extend({
+      props: {
+        name: ['string', true]
+      },
+      derived: {
+        greeting: {
+          cache: true,
+          deps: ['name'],
+          fn: function () {
+            ran++;
+            return 'hi, ' + this.name;
+          }
+        },
+        notCached: {
+          deps: ['name'],
+          fn: function () {
+            notCachedRan++
+            return 'hi, ' + this.name;
+          }
+        }
+      }
+    });
+    var foo = new Foo({name: 'henrik'});
+    strictEqual(ran, 0, 'derived function should not have run yet.');
+    equal(foo.greeting, 'hi, henrik');
+    equal(foo.greeting, 'hi, henrik');
+    equal(ran, 1, 'cached derived should only run once');
+    equal(notCachedRan, 0, 'shold not have been run yet')
+    foo.name = 'someone';
+    equal(foo.greeting, 'hi, someone');
+    equal(foo.greeting, 'hi, someone');
+    equal(ran, 2, 'cached derived should have been cleared and run once again');
+    equal(notCachedRan, 1, 'shold have been run once because it was triggered');
+    equal(foo.notCached, 'hi, someone');
+    equal(notCachedRan, 2, 'incremented again');
+    equal(foo.notCached, 'hi, someone');
+    equal(notCachedRan, 3, 'incremented each time');
+  });
+
+  test('derived properties with derived dependencies', 5, function () {
+    var ran = 0;
+    var Foo = Strict.Model.extend({
+      props: {
+        name: ['string', true]
+      },
+      derived: {
+        greeting: {
+          deps: ['name'],
+          fn: function () {
+            return 'hi, ' + this.name;
+          }
+        },
+        awesomeGreeting: {
+          deps: ['greeting'],
+          fn: function () {
+            return this.greeting + '!';
+          }
+        }
+      }
+    });
+    var foo = new Foo({name: 'henrik'});
+    foo.on('change:awesomeGreeting', function () {
+      ran++;
+      ok(true, 'should fire derived event');
+    });
+    foo.on('change:greeting', function () {
+      ran++;
+      ok(true, 'should fire derived event');
+    });
+    foo.on('change:name', function () {
+      ran++;
+      ok(true, 'should fire derived event');
+    });
+    foo.on('change', function () {
+      ran++;
+      ok(true, 'should file main event')
+    });
+    foo.name = 'something';
+    equal(ran, 4);
   });
 
   test('should fire a remove event', 1, function (next) {
@@ -231,14 +367,14 @@ $(function() {
     blah.firstName = 'blah';
   });
 
-  test('should remove from registry on remove', 1, function () {
+  test('should remove from registry on remove', 2, function () {
     var foo = new Foo({id: 20, lastName: 'hi'});
-
     foo.remove();
-
+    var found = Strict.registry.lookup('foo', 20);
+    ok(!found);
     // make a new one
     var bar = new Foo({id: 20});
-    strictEqual(bar.lastName, undefined);
+    strictEqual(bar.lastName, '');
   });
 
 });

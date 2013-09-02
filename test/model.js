@@ -211,8 +211,9 @@ $(document).ready(function() {
         'false': 'boolean',
         'empty': 'string',
         'name': 'string',
-        'null': 'object'
-      }
+        'null': 'object',
+        'undefined': 'string'
+      },
     }));
 
     strictEqual(model.has('name'), false);

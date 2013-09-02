@@ -102,6 +102,16 @@
     return child;
   };
 
+  var getDefaultForType = function (type) {
+    if (type === 'string') {
+      return '';
+    } else if (type === 'object') {
+      return {};
+    } else if (type === 'array') {
+      return [];
+    }
+  };
+
   // Mixins
   // ------
 
@@ -199,6 +209,8 @@
     this._deps = {};
     this._initProperties();
     this._initCollections();
+    this._initDerived();
+    this._createGlobalGetters();
     this._cache = {};
     this._verifyRequired();
     this.set(attrs, _.extend({silent: true}, options));
@@ -215,6 +227,8 @@
   // Attach all inheritable methods to the Model prototype.
   _.extend(Model.prototype, Backbone.Events, Mixins, {
     idAttribute: 'id',
+
+    allowOtherProperties: false,
 
     getId: function () {
       return this.get(this.idAttribute);
@@ -290,7 +304,15 @@
         newType = typeof val;
         newVal = val;
 
-        def = this.definition[attr] || {};
+        def = this.definition[attr];
+
+        if (!def) {
+          if (self.allowOtherProperties) {
+            def = this._createProperty(attr, 'any');
+          } else {
+            throw new TypeError('No "' + attr + '" property defined on ' + (this.type || 'this') + ' model and allowOtherProperties not set.');
+          }
+        }
 
         // check type if we have one
         if (def.type === 'date') {
@@ -319,7 +341,7 @@
 
         // If we have a defined type and the new type doesn't match, throw error.
         // Unless it's not required and the value is undefined.
-        if (def.type && def.type !== newType && (!def.required && !_.isUndefined(val))) {
+        if (def.type && def.type !== 'any' && def.type !== newType && (!def.required && !_.isUndefined(val))) {
           throw new TypeError('Property \'' + attr + '\' must be of type ' + def.type + '. Tried to set ' + val);
         }
 
@@ -344,25 +366,33 @@
 
       // actually update our values
       _.each(changes, function (change) {
+        var def = self.definition[change.key];
         self._previousAttributes && (self._previousAttributes[change.key] = change.prev);
         if (unset) {
-          delete self.definition[change.key].value;
+          delete def.value;
         } else {
-          self.definition[change.key].value = change.val;
+          def.value = change.val;
         }
       });
 
-      if (!silent) {
-        if (changes.length) self._pending = true;
-        _.each(changes, function (change) {
-          self.trigger('change:' + change.key, self, self[change.key]);
-          (self._deps[change.key] || []).forEach(function (derTrigger) {
-            // blow away our cache
-            delete self._cache[derTrigger];
-            self.trigger('change:' + derTrigger, self, self.derived[derTrigger]);
-          });
+      var triggers = [];
+
+      function gatherTriggers(key) {
+        triggers.push(key);
+        (self._deps[key] || []).forEach(function (derTrigger) {
+          gatherTriggers(derTrigger);
         });
       }
+
+      if (!silent && changes.length) self._pending = true;
+      _.each(changes, function (change) {
+        gatherTriggers(change.key);
+      });
+
+      _.each(_.uniq(triggers), function (key) {
+        delete self._cache[key];
+        if (!silent) self.trigger('change:' + key, self, self[key]);
+      });
 
       // You might be wondering why there's a `while` loop here. Changes can
       // be recursively nested within `"change"` events.
@@ -558,12 +588,8 @@
       if (def.required) {
         if (!_.isUndefined(def.default)) {
           val = def.default;
-        } else if (type === 'string') {
-          val = '';
-        } else if (type === 'object') {
-          val = {};
-        } else if (type === 'array') {
-          val = [];
+        } else {
+          val = getDefaultForType(type);
         }
         return this.set(attr, val, options);
       } else {
@@ -629,7 +655,6 @@
     },
 
     // Check that all required attributes are present
-    // TODO: should this throw an error or return boolean?
     _verifyRequired: function () {
       var attrs = this.attributes;
       for (var def in this.definition) {
@@ -638,6 +663,47 @@
         }
       }
       return true;
+    },
+
+    _createProperty: function (name, desc, isSession) {
+      var self = this;
+      var def = this.definition[name] = {};
+      var propAttributes = {};
+      var type;
+      if (_.isString(desc)) {
+        // grab our type if all we've got is a string
+        type = this._ensureValidType(desc);
+        if (type) def.type = type;
+      } else {
+        type = this._ensureValidType(desc[0] || desc.type);
+        if (type) def.type = type;
+        if (desc[1] || desc.required) def.required = true;
+        // set default if defined
+        def.value = !_.isUndefined(desc[2]) ? desc[2] : desc.default;
+        if (isSession) def.session = true;
+        if (desc.setOnce) def.setOnce = true;
+        if (def.required && _.isUndefined(def.value)) def.value = getDefaultForType(type);
+      }
+
+      // create our setter
+      propAttributes.set = function (val) {
+        self.set(name, val);
+      };
+      // create our getter
+      propAttributes.get = function (val) {
+        if (typeof def.value !== 'undefined') {
+          if (def.type === 'date') {
+            return new Date(def.value);
+          }
+          return def.value;
+        }
+        return;
+      };
+
+      // define our property
+      this.define(name, propAttributes);
+
+      return def;
     },
 
     _initProperties: function () {
@@ -651,83 +717,23 @@
 
       this.cid = _.uniqueId('model');
 
-      function addToDef(name, val, isSession) {
-        var def = definition[name] = {};
-        if (_.isString(val)) {
-          // grab our type if all we've got is a string
-          type = self._ensureValidType(val);
-          if (type) def.type = type;
-        } else {
-          type = self._ensureValidType(val[0] || val.type);
-          if (type) def.type = type;
-          if (val[1] || val.required) def.required = true;
-          // set default if defined
-          def.value = !_.isUndefined(val[2]) ? val[2] : val.default;
-          if (isSession) def.session = true;
-          if (val.setOnce) def.setOnce = true;
-        }
-      }
-
       // loop through given properties
       for (item in this.props) {
-        addToDef(item, this.props[item]);
+        this._createProperty(item, this.props[item]);
       }
       // loop through session props
       for (prop in this.session) {
-        addToDef(prop, this.session[prop], true);
+        this._createProperty(prop, this.session[prop], true);
       }
-
-      // always add "id" as a definition or make sure it's 'setOnce'
-      if (definition[this.idAttributes]) {
-        definition[this.idAttribute].setOnce = true;
-      }
-
-      // register derived properties as part of the definition
-      this._registerDerived();
-      this._createGettersSetters();
-
-      // freeze attributes used to define object
-      if (this.session) Object.freeze(this.session);
-      if (this.derived) Object.freeze(this.derived);
-      if (this.props) Object.freeze(this.props);
     },
 
     // just makes friendlier errors when trying to define a new model
     // only used when setting up original property definitions
     _ensureValidType: function (type) {
-      return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date'], type) ? type : undefined;
+      return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date', 'any'], type) ? type : undefined;
     },
 
-    _createGettersSetters: function () {
-      var item, def, desc, self = this;
-
-      // create getters/setters based on definitions
-      for (item in this.definition) {
-        def = this.definition[item];
-        desc = {};
-        // create our setter
-        desc.set = function (def, item) {
-          return function (val, options) {
-            self.set(item, val);
-          };
-        }(def, item);
-        // create our getter
-        desc.get = function (def, attributes) {
-          return function (val) {
-            if (typeof def.value !== 'undefined') {
-              if (def.type === 'date') {
-                return new Date(def.value);
-              }
-              return def.value;
-            }
-            return;
-          };
-        }(def);
-
-        // define our property
-        this.define(item, desc);
-      }
-
+    _createGlobalGetters: function () {
       this.defineGetter('attributes', function () {
         return this._getAttributes();
       });
@@ -759,43 +765,48 @@
       return res;
     },
 
+    _createDerivedProperty: function (name, definition) {
+      var self = this;
+      var def = this._derived[name] = {
+        fn: _.isFunction(definition) ? definition : definition.fn,
+        cache: definition.cache || false,
+        depList: definition.deps || []
+      };
+
+      // add to our shared dependency list
+      _.each(def.depList, function (dep) {
+        self._deps[dep] = _(self._deps[dep] || []).union([name]);
+      });
+
+      // defined a top-level getter for derived names
+      this.define(name, {
+        get: function () {
+          // is this a derived property we should cache?
+          if (self._derived[name].cache) {
+            // read through cache
+            return self._cache[name] || (self._cache[name] = self._derived[name].fn.apply(self));
+          } else {
+            return self._derived[name].fn.apply(self);
+          }
+        },
+        set: function (name) {
+          var deps = self._derived[name].deps,
+            msg = '"' + name + '" is a derived property, you can\'t set it directly.';
+          if (deps && deps.length) {
+            throw new TypeError(msg + ' It is dependent on "' + deps.join('" and "') + '".');
+          } else {
+            throw new TypeError(msg);
+          }
+        }
+      });
+    },
+
     // stores an object of arrays that specifies the derivedProperties
     // that depend on each attribute
-    _registerDerived: function () {
-      var self = this, depList;
-      if (!this.derived) return;
-      this._derived = this.derived;
+    _initDerived: function () {
+      this._derived = this.derived || {};
       for (var key in this.derived) {
-        depList = this.derived[key].deps || [];
-        _.each(depList, function (dep) {
-          self._deps[dep] = _(self._deps[dep] || []).union([key]);
-        });
-
-        // defined a top-level getter for derived keys
-        this.define(key, {
-          get: _.bind(function (key) {
-            // is this a derived property we should cache?
-            if (this._derived[key].cache) {
-              // do we have it?
-              if (this._cache.hasOwnProperty(key)) {
-                return this._cache[key];
-              } else {
-                return this._cache[key] = this._derived[key].fn.apply(this);
-              }
-            } else {
-              return this._derived[key].fn.apply(this);
-            }
-          }, this, key),
-          set: _.bind(function (key) {
-            var deps = this._derived[key].deps,
-              msg = '"' + key + '" is a derived property, you can\'t set it directly.';
-            if (deps && deps.length) {
-              throw new TypeError(msg + ' It is dependent on "' + deps.join('" and "') + '".');
-            } else {
-              throw new TypeError(msg);
-            }
-          }, this, key)
-        });
+        this._createDerivedProperty(key, this.derived[key]);
       }
     }
   });
