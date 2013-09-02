@@ -1,7 +1,7 @@
 $(function() {
   var definition, Foo, Collection, collection;
 
-  module("StrictModel", _.extend(new Environment, {
+  module("HumanModel", _.extend(new Environment, {
     setup: function() {
       Environment.prototype.setup.apply(this, arguments);
 
@@ -48,7 +48,7 @@ $(function() {
         }
       };
 
-      Foo = Strict.Model.extend(definition);
+      Foo = HumanModel.extend(definition);
       Collection = Backbone.Collection.extend({
         url : function() { return '/collection'; }
       });
@@ -66,7 +66,7 @@ $(function() {
 
   test('should be sealable', 2, function () {
     definition.seal = true;
-    var Bar = Strict.Model.extend(definition);
+    var Bar = HumanModel.extend(definition);
     var bar = new Bar();
     throws(function () {
       "use strict";
@@ -96,18 +96,29 @@ $(function() {
     strictEqual(foo.thing, 'hi');
   });
 
-  test('Setting other properties without explicit permission throws error', 1, function () {
+  test('Setting other properties when `extraProperties: "reject"` throws error', 1, function () {
+    var Foo = HumanModel.extend({
+      extraProperties: 'reject'
+    });
     var foo = new Foo();
     throws(function () {
       foo.set({
         craziness: 'new'
       });
-    }, Error, 'Throws exception unless allowed');
+    }, Error, 'Throws exception if set to rejcet');
+  });
+
+  test('Setting other properties ignores them by default', 1, function () {
+    var foo = new HumanModel();
+    foo.set({
+      craziness: 'new'
+    });
+    strictEqual(foo.craziness, undefined, 'property should be ignored');
   });
 
   test('Setting other properties is ok if allowOtherProperties is true', 1, function () {
     var foo = new Foo();
-    foo.allowOtherProperties = true;
+    foo.extraProperties = 'allow';
     foo.set({
       craziness: 'new'
     });
@@ -201,7 +212,7 @@ $(function() {
 
   test('should fire events normally for properties defined on the fly', 1, function (next) {
     var foo = new Foo();
-    foo.allowOtherProperties = true;
+    foo.extraProperties = 'allow';
     foo.on('change:crazyPerson', function () {
       ok(true);
     });
@@ -211,8 +222,8 @@ $(function() {
   });
 
   test('should fire event on derived properties, even if dependent on ad hoc prop.', 1, function () {
-    var Foo = new Strict.Model.extend({
-      allowOtherProperties: true,
+    var Foo = new HumanModel.extend({
+      extraProperties: 'allow',
       derived: {
         isCrazy: {
           deps: ['crazyPerson'],
@@ -222,7 +233,7 @@ $(function() {
         }
       }
     });
-    foo.allowOtherProperties = true;
+    foo.extraProperties = 'allow';
     foo.on('change:isCrazy', function () {
       ok(true);
     });
@@ -253,7 +264,7 @@ $(function() {
   test('derived properties', function () {
     var ran = 0;
     var notCachedRan = 0;
-    var Foo = Strict.Model.extend({
+    var Foo = HumanModel.extend({
       props: {
         name: ['string', true]
       },
@@ -294,7 +305,7 @@ $(function() {
 
   test('derived properties with derived dependencies', 5, function () {
     var ran = 0;
-    var Foo = Strict.Model.extend({
+    var Foo = HumanModel.extend({
       props: {
         name: ['string', true]
       },
@@ -358,7 +369,7 @@ $(function() {
       firstName: 'roger',
       thing: 'meow'
     });
-    var blah = Strict.registry.lookup('foo', 1);
+    var blah = HumanModel.registry.lookup('foo', 1);
     strictEqual(foo.firstName, blah.firstName);
     strictEqual(foo, blah);
     foo.on('change', function () {
@@ -370,7 +381,7 @@ $(function() {
   test('should remove from registry on remove', 2, function () {
     var foo = new Foo({id: 20, lastName: 'hi'});
     foo.remove();
-    var found = Strict.registry.lookup('foo', 20);
+    var found = HumanModel.registry.lookup('foo', 20);
     ok(!found);
     // make a new one
     var bar = new Foo({id: 20});

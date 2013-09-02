@@ -1,10 +1,14 @@
 {
-    "name": "strictmodel",
-    "version": "0.2.0",
+    "name": "human-model",
+    "version": "0.3.0",
     "author": "Henrik Joreteg <henrik@andyet.net>",
     "contributors": [{
         "name": "Beau Sorensen"
     }],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/henrikjoreteg/human-model.git"
+    },
     "dependencies": {
         "backbone": "1.0.0",
         "underscore": "1.4.4"
@@ -16,6 +20,6 @@
     "scripts": {
         "build": "node build.js"
     },
-    "main": "./strictmodel.js",
-    "browser": "./strictmodel.js"
+    "main": "./human-model.js",
+    "browser": "./human-model.js"
 }

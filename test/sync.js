@@ -1,6 +1,6 @@
 $(document).ready(function() {
 
-  var Book = Strict.Model.extend({
+  var Book = HumanModel.extend({
     props: {
       id: 'string',
       title: 'string',

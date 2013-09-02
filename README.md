@@ -1,8 +1,8 @@
-# StrictModel
+# Human Model
 
-StrictModel is meant to work as a drop-in replacement for Backbone models. In fact, it's extensively tested against the unit tests from Backbone (open test/index.html to run). 
+Human Models are meant to work as a drop-in replacement for Backbone models. In fact, it's extensively tested against the unit tests from Backbone (open test/index.html to run). 
 
-However, Strict Models are far more restrictive and structured. They force you to specify properties (at at minimum their types) for things you want it to store.
+However, Human Models are far more restrictive and structured. They force you to specify properties (at at minimum their types) for things you want it to store.
 
 ## Why do this?
 
@@ -10,11 +10,11 @@ Backbone models have a lot of flexibility in that you don't have to define what 
 
 The only challenge with that is that for more complex applications is actually becomes quite difficult to remember what properties are available to you.
 
-Using strict models means they're much more self-documenting and help catch bugs. Someone new to the project can read the models and have a pretty good idea of how the app is put together.
+Using human models means they're much more self-documenting and help catch bugs. Someone new to the project can read the models and have a pretty good idea of how the app is put together.
 
 It also uses's ES5's fancy `Object.defineProperty` to treat model attributes as if they were properties.
 
-That means with Strict Model you can set an attribute like this: `user.name = 'henrik'` and still get a `change:name` event fired. 
+That means with Human Model you can set an attribute like this: `user.name = 'henrik'` and still get a `change:name` event fired. 
 
 Obviously, this restriction also means that this won't work in browsers that don't support that. You can check specific browser support here: http://kangax.github.io/es5-compat-table/
 
@@ -51,7 +51,7 @@ props: {
 
 ```js
 StrictModel.extend({
-    // every strict model needs a type
+    // every human model should have a type
     type: 'member',
     init: function () {
         // main initialization function
@@ -104,7 +104,7 @@ StrictModel.extend({
 });
 ```
 
-### Going hardcore "strict"
+### Going hardcore "strict" definition
 
 [Strict mode](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions_and_function_scope/Strict_mode) in JS is pretty great and is fairly well supported in modern browsers.
 
@@ -117,6 +117,9 @@ If you want to be *really* hardcore about not letting you set properties that ar
 var MySuperStrictModel = Strict.Model.extend({
     // set this to true
     seal: true,
+    // also throw errors for properties not defined
+    // when set via `set`.
+    extraProperties: 'reject',
     // normal properties
     props: {
         name: 'string'
@@ -141,10 +144,10 @@ model.something = 'something else'; // KABOOM!
 // backbone:
 user.set('firstName', 'billy bob');
 
-// strict:
+// human:
 user.firstName = 'billy bob';
 
-// p.s. you can still do it the other way in strict (so you can still pass otions)
+// p.s. you can still do it the other way in human (so you can still pass otions)
 user.set('firstName', 'billy bob', {silent: true})
 ```
 
@@ -154,7 +157,7 @@ user.set('firstName', 'billy bob', {silent: true})
 // backbone:
 user.get('firstName');
 
-// strict
+// human
 user.firstName;
 ```
 

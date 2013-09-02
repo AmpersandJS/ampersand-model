@@ -1,7 +1,7 @@
 //   (c) 2013 Henrik Joreteg
 //   MIT Licensed
 //   For all details and documentation:
-//   https://github.com/HenrikJoreteg/StrictModel
+//   https://github.com/HenrikJoreteg/human-model
 (function () {
   'use strict';
 
@@ -10,15 +10,8 @@
 
   // Establish the root object, `window` in the browser, or `global` on the server.
   var root = this;
-
-  // The top-level namespace. All public Backbone classes and modules will
-  // be attached to this. Exported for both CommonJS and the browser.
-  var Strict = typeof exports !== 'undefined' ? exports : root.Strict = {},
-    toString = Object.prototype.toString,
-    slice = Array.prototype.slice;
-
-  // Current version of the library. Keep in sync with `package.json`.
-  Strict.VERSION = '0.0.1';
+  var toString = Object.prototype.toString;
+  var slice = Array.prototype.slice;
 
   // Require Underscore, if we're on the server, and it's not already present.
   var _ = root._;
@@ -28,16 +21,22 @@
   var Backbone = root.Backbone;
   if (!Backbone && (typeof require !== 'undefined')) Backbone = require('backbone');
 
+  if (typeof exports !== 'undefined') {
+    module.exports = HumanModel;
+  } else {
+    root.HumanModel = HumanModel;
+  }
+
   // Backbone Collection compatibility fix:
   // In backbone, when you add an already instantiated model to a collection
   // the collection checks to see if what you're adding is already a model
   // the problem is, it does this witn an instanceof check. We're wanting to
   // use completely different models so the instanceof will fail even if they
   // are "real" models. So we work around this by overwriting this method from
-  // backbone 1.0.0. The only difference is it compares against our Strict.Model
+  // backbone 1.0.0. The only difference is it compares against our HumanModel
   // instead of backbone's.
   Backbone.Collection.prototype._prepareModel = function (attrs, options) {
-    if (attrs instanceof Strict.Model) {
+    if (attrs instanceof HumanModel) {
       if (!attrs.collection) attrs.collection = this;
       return attrs;
     }
@@ -102,47 +101,15 @@
     return child;
   };
 
-  var getDefaultForType = function (type) {
-    if (type === 'string') {
-      return '';
-    } else if (type === 'object') {
-      return {};
-    } else if (type === 'array') {
-      return [];
-    }
-  };
 
-  // Mixins
-  // ------
-
-  // Sugar for defining properties a la ES5.
-  var Mixins = Strict.Mixins = {
-    // shortcut for Object.defineProperty
-    define: function (name, def) {
-      Object.defineProperty(this, name, def);
-    },
-
-    defineGetter: function (name, handler) {
-      this.define(name, {
-        get: handler.bind(this)
-      });
-    },
-
-    defineSetter: function (name, handler) {
-      this.define(name, {
-        set: handler.bind(this)
-      });
-    }
-  };
-
-  // Strict.Registry
+  // Registry
   // ---------------
 
   // Internal storage for models, seperate namespace
   // storage from default to prevent collision of matching
   // model type+id and namespace name
 
-  var Registry = Strict.Registry = function () {
+  var Registry = function () {
     this._cache = {};
     this._namespaces = {};
   };
@@ -190,19 +157,17 @@
     }
   });
 
-  // Create the default Strict.registry.
-  Strict.registry = new Registry();
-
-  // Strict.Model
+  // HumanModel
   // ------------
 
-  var Model = Strict.Model = function (attrs, options) {
+  function HumanModel(attrs, options) {
     attrs || (attrs = {});
     options || (options = {});
 
     // set the collection if passed in
     this.collection = options.collection || undefined;
     if (options.parse) attrs = this.parse(attrs, options) || {};
+    this.registry = options.registry || HumanModel.registry;
     options._attrs = attrs;
     this._namespace = options.namespace;
     this._initted = false;
@@ -216,19 +181,24 @@
     this.set(attrs, _.extend({silent: true}, options));
     this.changed = {};
     this.initialize.apply(this, arguments);
-    if (attrs[this.idAttribute]) Strict.registry.store(this);
+    if (attrs[this.idAttribute]) this.registry.store(this);
     this._initted = true;
     this._previousAttributes = {};
     if (this.seal) {
       Object.seal(this);
     }
-  };
+  }
+
+  // singleton main registry
+  HumanModel.registry = new Registry();
+  HumanModel.Registry = Registry;
 
   // Attach all inheritable methods to the Model prototype.
-  _.extend(Model.prototype, Backbone.Events, Mixins, {
+  _.extend(HumanModel.prototype, Backbone.Events, {
     idAttribute: 'id',
 
-    allowOtherProperties: false,
+    // can be allow, ignore, reject
+    extraProperties: 'ignore',
 
     getId: function () {
       return this.get(this.idAttribute);
@@ -244,10 +214,27 @@
       return resp;
     },
 
+    // shortcut to define property
+    define: function (name, def) {
+      Object.defineProperty(this, name, def);
+    },
+
+    defineGetter: function (name, handler) {
+      this.define(name, {
+        get: handler.bind(this)
+      });
+    },
+
+    defineSetter: function (name, handler) {
+      this.define(name, {
+        set: handler.bind(this)
+      });
+    },
+
     // Remove model from the registry and unbind events
     remove: function () {
       if (this.getId()) {
-        Strict.registry.remove(this.type, this.getId(), this._namespace);
+        this.registry.remove(this.type, this.getId(), this._namespace);
       }
       this.trigger('remove', this);
       this.off();
@@ -255,20 +242,11 @@
     },
 
     set: function (key, value, options) {
-      var self = this,
-        changing,
-        current,
-        previous,
-        changes,
-        newType,
-        interpretedType,
-        newVal,
-        def,
-        attr,
-        attrs,
-        silent,
-        unset,
-        val;
+      var self = this;
+      var extraProperties = this.extraProperties;
+      var changing, current, previous, changes,
+        newType, interpretedType, newVal, def,
+        attr, attrs, silent, unset, val;
 
       // Handle both `"key", value` and `{key: value}` -style arguments.
       if (_.isObject(key) || key === null) {
@@ -307,10 +285,12 @@
         def = this.definition[attr];
 
         if (!def) {
-          if (self.allowOtherProperties) {
-            def = this._createProperty(attr, 'any');
-          } else {
+          if (extraProperties === 'ignore') {
+            continue;
+          } else if (extraProperties === 'reject') {
             throw new TypeError('No "' + attr + '" property defined on ' + (this.type || 'this') + ' model and allowOtherProperties not set.');
+          } else if (extraProperties === 'allow') {
+            def = this._createProperty(attr, 'any');
           }
         }
 
@@ -589,7 +569,7 @@
         if (!_.isUndefined(def.default)) {
           val = def.default;
         } else {
-          val = getDefaultForType(type);
+          val = this._getDefaultForType(type);
         }
         return this.set(attr, val, options);
       } else {
@@ -614,6 +594,17 @@
       if (!error) return true;
       this.trigger('invalid', this, error, _.extend(options || {}, {validationError: error}));
       return false;
+    },
+
+    // Get default values for a certain type
+    _getDefaultForType: function (type) {
+      if (type === 'string') {
+        return '';
+      } else if (type === 'object') {
+        return {};
+      } else if (type === 'array') {
+        return [];
+      }
     },
 
     // convenience methods for manipulating array properties
@@ -682,7 +673,7 @@
         def.value = !_.isUndefined(desc[2]) ? desc[2] : desc.default;
         if (isSession) def.session = true;
         if (desc.setOnce) def.setOnce = true;
-        if (def.required && _.isUndefined(def.value)) def.value = getDefaultForType(type);
+        if (def.required && _.isUndefined(def.value)) def.value = this._getDefaultForType(type);
       }
 
       // create our setter
@@ -816,7 +807,7 @@
 
   // Mix in each Underscore method as a proxy to `Model#attributes`.
   _.each(modelMethods, function (method) {
-    Model.prototype[method] = function () {
+    HumanModel.prototype[method] = function () {
       var args = slice.call(arguments);
       args.unshift(this.attributes);
       return _[method].apply(_, args);
@@ -824,9 +815,9 @@
   });
 
   // Set up inheritance for the model
-  Strict.Model.extend = extend;
+  HumanModel.extend = extend;
 
-  Model.prototype.init = Model.prototype.initialize;
+  HumanModel.prototype.init = HumanModel.prototype.initialize;
 
   // Wrap an optional error callback with a fallback error event.
   var wrapError = function (model, options) {
