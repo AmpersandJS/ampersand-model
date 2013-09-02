@@ -21,7 +21,7 @@ Obviously, this restriction also means that this won't work in browsers that don
 
 ## Key Differences from Backbone
 
-Everything Backbone does with Collections should Just Work™ with StrictModel as long as you specify a StrictModel constructor as a collection's `model` property.
+Everything Backbone does with Collections should Just Work™ with HumanModel as long as you specify a HumanModel constructor as a collection's `model` property.
 
 Besides that and the obvious differences any behavior that doesn't match Backbone should be considered a bug.
 
@@ -50,7 +50,7 @@ props: {
 ### A sample model with comments
 
 ```js
-StrictModel.extend({
+HumanModel.extend({
     // every human model should have a type
     type: 'member',
     init: function () {
@@ -114,7 +114,7 @@ If you want to be *really* hardcore about not letting you set properties that ar
 // enable strict mode
 "use strict";
 
-var MySuperStrictModel = Strict.Model.extend({
+var MySuperStrictModel = HumanModel.extend({
     // set this to true
     seal: true,
     // also throw errors for properties not defined
@@ -163,7 +163,7 @@ user.firstName;
 
 ## The Registry
 
-Strict inits a global registery for storing all initted models. It's designed to be used for looking up models based on their type, id and optional namespace.
+HumanModel also inits a global registery for storing all initted models. It's designed to be used for looking up models based on their type, id and optional namespace.
 
 It's purpose is finding/updating models when we get updates pushed to us from the server. This is very important for buildling realtime apps.
 
@@ -171,11 +171,11 @@ TODO: needs more docs on the registry.
 
 ## Tests
 
-An extensive suite of tests can be run by opening `test/index.html` in a browser. In order to ensure compatibility with backbone to the extent possible I started with all the tests from Backbone 1.0.0 and modified them to use StrictModel.
+An extensive suite of tests can be run by opening `test/index.html` in a browser. In order to ensure compatibility with backbone to the extent possible I started with all the tests from Backbone 1.0.0 and modified them to use HumanModel.
 
 ## Caveats 
 
-- Since backbone does an `instanceof` check when adding initted models to a collection, Strict Model monkey patches the `_prepareModel` collection method to check against StrictModel instead.
+- Since backbone does an `instanceof` check when adding initted models to a collection, HumanModel monkey patches the `_prepareModel` collection method to check against HumanModel instead.
 - Still needs better docs. Probably a full docs site.
 
 ## Authors
