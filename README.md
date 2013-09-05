@@ -23,7 +23,10 @@ Obviously, this restriction also means that this won't work in browsers that don
 
 Everything Backbone does with Collections should Just Work™ with HumanModel as long as you specify a HumanModel constructor as a collection's `model` property.
 
-Besides that and the obvious differences any behavior that doesn't match Backbone should be considered a bug.
+**important**: One key point to understand is that unlike backbone. You're actually passing an object definition that describes the Model, not just methods to attach to its prototype. For example, you'll notice we call `HumanModel.define()` instead of `Backbone.Model.extend()`. This is to make the distinction clear.
+
+Besides that and the obvious differences, any behavior that doesn't match Backbone should be considered a bug.
+
 
 ### Explicit model definitions
 
@@ -50,7 +53,7 @@ props: {
 ### A sample model with comments
 
 ```js
-HumanModel.extend({
+var Person = HumanModel.define({
     // every human model should have a type
     type: 'member',
     init: function () {
@@ -114,7 +117,7 @@ If you want to be *really* hardcore about not letting you set properties that ar
 // enable strict mode
 "use strict";
 
-var MySuperStrictModel = HumanModel.extend({
+var MySuperStrictModel = HumanModel.define({
     // set this to true
     seal: true,
     // also throw errors for properties not defined
@@ -180,8 +183,12 @@ An extensive suite of tests can be run by opening `test/index.html` in a browser
 
 ## Authors
 
-Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions from [@beausorensen](http://twitter.com/beausorensen)
+Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions from [@beausorensen](http://twitter.com/beausorensen) and [@LanceStout](https://twitter.com/lancestout).;
 
+
+## Changelog
+
+ - 1.0.0 - Switching from `extend()` to `define()` pattern for building a model definition.
 
 ## License
 
