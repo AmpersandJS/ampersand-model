@@ -22,9 +22,9 @@
   if (!Backbone && (typeof require !== 'undefined')) Backbone = require('backbone');
 
   if (typeof exports !== 'undefined') {
-    module.exports = HumanModel;
+    module.exports = HumanModelBase;
   } else {
-    root.HumanModel = HumanModel;
+    root.HumanModel = HumanModelBase;
   }
 
   // Backbone Collection compatibility fix:
@@ -36,7 +36,7 @@
   // backbone 1.0.0. The only difference is it compares against our HumanModel
   // instead of backbone's.
   Backbone.Collection.prototype._prepareModel = function (attrs, options) {
-    if (attrs instanceof HumanModel) {
+    if (attrs instanceof HumanModelBase) {
       if (!attrs.collection) attrs.collection = this;
       return attrs;
     }
@@ -53,52 +53,71 @@
   // Helpers
   // -------
 
-  // Shared empty constructor function to aid in prototype-chain creation.
-  var Constructor = function () {};
+  // Helper function to define properties
+  var define = function (spec) {
+    spec || (spec = {});
+    var key;
+    var HumanModel = function () {
+      HumanModelBase.apply(this, arguments);
+    };
 
-  // Helper function to correctly set up the prototype chain, for subclasses.
-  // Similar to `goog.inherits`, but uses a hash of prototype properties and
-  // class properties to be extended.
-  var inherits = function (parent, protoProps, staticProps) {
-    var child;
+    HumanModel.prototype = Object.create(HumanModelBase.prototype, {
+      constructor: {
+        value: HumanModel
+      }
+    });
 
-    // The constructor function for the new subclass is either defined by you
-    // (the "constructor" property in your `extend` definition), or defaulted
-    // by us to simply call the parent's constructor.
-    if (protoProps && protoProps.hasOwnProperty('constructor')) {
-      child = protoProps.constructor;
-    } else {
-      child = function () { return parent.apply(this, arguments); };
+    for (key in spec) {
+      if (key === 'props' || key === 'session') {
+        HumanModel.prototype['_' + key] = spec[key];
+      } else if (key === 'derived') {
+        _.each(spec[key], function (def, name) {
+          createDerivedProperty(HumanModel.prototype, name, def, key === 'session');
+        });
+      } else if (key === 'collections') {
+        HumanModel.prototype._collections = spec[key];
+      } else {
+        HumanModel.prototype[key] = spec[key];
+      }
     }
 
-    // Inherit class (static) properties from parent.
-    _.extend(child, parent);
-
-    // Set the prototype chain to inherit from `parent`, without calling
-    // `parent`'s constructor function.
-    Constructor.prototype = parent.prototype;
-    child.prototype = new Constructor();
-
-    // Add prototype properties (instance properties) to the subclass,
-    // if supplied.
-    if (protoProps) _.extend(child.prototype, protoProps);
-
-    // Add static properties to the constructor function, if supplied.
-    if (staticProps) _.extend(child, staticProps);
-
-    // Correctly set child's `prototype.constructor`.
-    child.prototype.constructor = child;
-
-    // Set a convenience property in case the parent's prototype is needed later.
-    child.__super__ = parent.prototype;
-
-    return child;
+    return HumanModel;
   };
 
-  var extend = function (protoProps, classProps) {
-    var child = inherits(this, protoProps, classProps);
-    child.extend = this.extend;
-    return child;
+  var createDerivedProperty = function (modelPrototype, name, definition) {
+    var def = modelPrototype._derived[name] = {
+      fn: _.isFunction(definition) ? definition : definition.fn,
+      cache: definition.cache || false,
+      depList: definition.deps || []
+    };
+
+
+    // add to our shared dependency list
+    _.each(def.depList, function (dep) {
+      modelPrototype._deps[dep] = _(modelPrototype._deps[dep] || []).union([name]);
+    });
+
+    // defined a top-level getter for derived names
+    modelPrototype._define(name, {
+      get: function () {
+        // is this a derived property we should cache?
+        if (this._derived[name].cache) {
+          // read through cache
+          return this._cache[name] || (this._cache[name] = this._derived[name].fn.apply(this));
+        } else {
+          return this._derived[name].fn.apply(this);
+        }
+      },
+      set: function (name) {
+        var deps = this._derived[name].deps,
+          msg = '"' + name + '" is a derived property, you can\'t set it directly.';
+        if (deps && deps.length) {
+          throw new TypeError(msg + ' It is dependent on "' + deps.join('" and "') + '".');
+        } else {
+          throw new TypeError(msg);
+        }
+      }
+    });
   };
 
 
@@ -157,27 +176,27 @@
     }
   });
 
-  // HumanModel
+  // HumanModelBase
   // ------------
 
-  function HumanModel(attrs, options) {
+  function HumanModelBase(attrs, options) {
     attrs || (attrs = {});
     options || (options = {});
-
+    this.cid = _.uniqueId('model');
     // set the collection if passed in
     this.collection = options.collection || undefined;
     if (options.parse) attrs = this.parse(attrs, options) || {};
-    this.registry = options.registry || HumanModel.registry;
+    this.registry = options.registry || HumanModelBase.registry;
     options._attrs = attrs;
     this._namespace = options.namespace;
     this._initted = false;
-    this._deps = {};
+
+    this._definition = {};
+    this._cache = {};
+
     this._initProperties();
     this._initCollections();
-    this._initDerived();
-    this._createGlobalGetters();
-    this._cache = {};
-    this._verifyRequired();
+
     this.set(attrs, _.extend({silent: true}, options));
     this.changed = {};
     this.initialize.apply(this, arguments);
@@ -190,12 +209,16 @@
   }
 
   // singleton main registry
-  HumanModel.registry = new Registry();
-  HumanModel.Registry = Registry;
+  HumanModelBase.registry = new Registry();
+  HumanModelBase.Registry = Registry;
 
   // Attach all inheritable methods to the Model prototype.
-  _.extend(HumanModel.prototype, Backbone.Events, {
+  _.extend(HumanModelBase.prototype, Backbone.Events, {
     idAttribute: 'id',
+
+    // storage for our rules about derived properties
+    _derived: {},
+    _deps: {},
 
     // can be allow, ignore, reject
     extraProperties: 'ignore',
@@ -215,20 +238,8 @@
     },
 
     // shortcut to define property
-    define: function (name, def) {
+    _define: function (name, def) {
       Object.defineProperty(this, name, def);
-    },
-
-    defineGetter: function (name, handler) {
-      this.define(name, {
-        get: handler.bind(this)
-      });
-    },
-
-    defineSetter: function (name, handler) {
-      this.define(name, {
-        set: handler.bind(this)
-      });
     },
 
     // Remove model from the registry and unbind events
@@ -282,7 +293,7 @@
         newType = typeof val;
         newVal = val;
 
-        def = this.definition[attr];
+        def = this._definition[attr];
 
         if (!def) {
           if (extraProperties === 'ignore') {
@@ -346,7 +357,7 @@
 
       // actually update our values
       _.each(changes, function (change) {
-        var def = self.definition[change.key];
+        var def = self._definition[change.key];
         self._previousAttributes && (self._previousAttributes[change.key] = change.prev);
         if (unset) {
           delete def.value;
@@ -562,7 +573,7 @@
     },
 
     unset: function (attr, options) {
-      var def = this.definition[attr];
+      var def = this._definition[attr];
       var type = def.type;
       var val;
       if (def.required) {
@@ -638,9 +649,9 @@
 
     _initCollections: function () {
       var coll;
-      if (!this.collections) return;
-      for (coll in this.collections) {
-        this[coll] = new this.collections[coll]();
+      if (!this._collections) return;
+      for (coll in this._collections) {
+        this[coll] = new this._collections[coll]();
         this[coll].parent = this;
       }
     },
@@ -648,8 +659,8 @@
     // Check that all required attributes are present
     _verifyRequired: function () {
       var attrs = this.attributes;
-      for (var def in this.definition) {
-        if (this.definition[def].required && typeof attrs[def] === 'undefined') {
+      for (var def in this._definition) {
+        if (this._definition[def].required && typeof attrs[def] === 'undefined') {
           return false;
         }
       }
@@ -658,7 +669,7 @@
 
     _createProperty: function (name, desc, isSession) {
       var self = this;
-      var def = this.definition[name] = {};
+      var def = this._definition[name] = {};
       var propAttributes = {};
       var type;
       if (_.isString(desc)) {
@@ -692,29 +703,21 @@
       };
 
       // define our property
-      this.define(name, propAttributes);
+      this._define(name, propAttributes);
 
       return def;
     },
 
     _initProperties: function () {
-      var self = this,
-        definition = this.definition = {},
-        val,
-        prop,
-        item,
-        type,
-        filler;
-
-      this.cid = _.uniqueId('model');
+      var prop;
 
       // loop through given properties
-      for (item in this.props) {
-        this._createProperty(item, this.props[item]);
+      for (prop in this._props) {
+        this._createProperty(prop, this._props[prop]);
       }
       // loop through session props
-      for (prop in this.session) {
-        this._createProperty(prop, this.session[prop], true);
+      for (prop in this._session) {
+        this._createProperty(prop, this._session[prop], true);
       }
     },
 
@@ -724,81 +727,16 @@
       return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date', 'any'], type) ? type : undefined;
     },
 
-    _createGlobalGetters: function () {
-      this.defineGetter('attributes', function () {
-        return this._getAttributes();
-      });
-
-      this.defineGetter('json', function () {
-        return JSON.stringify(this._getAttributes(false, true));
-      });
-
-      this.defineGetter('derived', function () {
-        var res = {};
-        for (var item in this._derived) res[item] = this._derived[item].fn.apply(this);
-        return res;
-      });
-
-      this.defineGetter('toTemplate', function () {
-        return _.extend(this._getAttributes(true), this.derived);
-      });
-    },
-
     _getAttributes: function (includeSession, raw) {
       var res = {};
       var val;
-      for (var item in this.definition) {
-        if (!(!includeSession && this.definition[item].session)) {
-          val = (raw) ? this.definition[item].value : this[item];
+      for (var item in this._definition) {
+        if (!(!includeSession && this._definition[item].session)) {
+          val = (raw) ? this._definition[item].value : this[item];
           if (val !== undefined) res[item] = val;
         }
       }
       return res;
-    },
-
-    _createDerivedProperty: function (name, definition) {
-      var self = this;
-      var def = this._derived[name] = {
-        fn: _.isFunction(definition) ? definition : definition.fn,
-        cache: definition.cache || false,
-        depList: definition.deps || []
-      };
-
-      // add to our shared dependency list
-      _.each(def.depList, function (dep) {
-        self._deps[dep] = _(self._deps[dep] || []).union([name]);
-      });
-
-      // defined a top-level getter for derived names
-      this.define(name, {
-        get: function () {
-          // is this a derived property we should cache?
-          if (self._derived[name].cache) {
-            // read through cache
-            return self._cache[name] || (self._cache[name] = self._derived[name].fn.apply(self));
-          } else {
-            return self._derived[name].fn.apply(self);
-          }
-        },
-        set: function (name) {
-          var deps = self._derived[name].deps,
-            msg = '"' + name + '" is a derived property, you can\'t set it directly.';
-          if (deps && deps.length) {
-            throw new TypeError(msg + ' It is dependent on "' + deps.join('" and "') + '".');
-          } else {
-            throw new TypeError(msg);
-          }
-        }
-      });
-    },
-
-    // stores an object of arrays that specifies the derivedProperties
-    // that depend on each attribute
-    _initDerived: function () {
-      this._derived = this.derived || {};
-      for (var key in this.derived) {
-        this._createDerivedProperty(key, this.derived[key]);
-      }
     }
   });
 
@@ -807,17 +745,43 @@
 
   // Mix in each Underscore method as a proxy to `Model#attributes`.
   _.each(modelMethods, function (method) {
-    HumanModel.prototype[method] = function () {
+    HumanModelBase.prototype[method] = function () {
       var args = slice.call(arguments);
       args.unshift(this.attributes);
       return _[method].apply(_, args);
     };
   });
 
-  // Set up inheritance for the model
-  HumanModel.extend = extend;
+  // add some other getters to our prototype
+  Object.defineProperties(HumanModelBase.prototype, {
+    attributes: {
+      get: function () {
+        return this._getAttributes();
+      }
+    },
+    json: {
+      get: function () {
+        return JSON.stringify(this._getAttributes(false, true));
+      }
+    },
+    derived: {
+      get: function () {
+        var res = {};
+        for (var item in this._derived) res[item] = this._derived[item].fn.apply(this);
+        return res;
+      }
+    },
+    toTemplate: {
+      get: function () {
+        return _.extend(this._getAttributes(true), this.derived);
+      }
+    }
+  });
 
-  HumanModel.prototype.init = HumanModel.prototype.initialize;
+  // Create our method for defining models
+  HumanModelBase.define = define;
+
+  HumanModelBase.prototype.init = HumanModelBase.prototype.initialize;
 
   // Wrap an optional error callback with a fallback error event.
   var wrapError = function (model, options) {

@@ -7,7 +7,7 @@ $(document).ready(function() {
     setup: function() {
       Environment.prototype.setup.apply(this, arguments);
 
-      Model = HumanModel.extend({
+      Model = HumanModel.define({
         props: {
           id: 'number',
           label: 'string'
@@ -81,7 +81,7 @@ $(document).ready(function() {
   /*
   test("get with non-default ids", 5, function() {
     var col = new Backbone.Collection();
-    var MongoModel = HumanModel.extend({
+    var MongoModel = HumanModel.define({
       props: {
         _id: 'number'
       },
@@ -227,7 +227,7 @@ $(document).ready(function() {
   });
 
   test("add model with parse", 1, function() {
-    var Model = col.model.extend({
+    var Model = HumanModel.define({
       parse: function(obj) {
         obj.value += 1;
         return obj;
@@ -244,7 +244,7 @@ $(document).ready(function() {
   });
 
   test("add with parse and merge", function() {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       parse: function (data) {
         return data.model;
       },
@@ -260,7 +260,7 @@ $(document).ready(function() {
   });
 
   test("add model to collection with sort()-style comparator", 3, function() {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         name: 'string'
       }
@@ -330,7 +330,7 @@ $(document).ready(function() {
 
   test("events are unbound on remove", 3, function() {
     var counter = 0;
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         name: 'string'
       }
@@ -352,7 +352,7 @@ $(document).ready(function() {
       id : 5,
       title : 'Othello'
     };
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         id: 'number',
         title: 'string'
@@ -380,7 +380,7 @@ $(document).ready(function() {
 
   test("remove same model in multiple collection", 16, function() {
     var counter = 0;
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         id: 'number',
         title: 'string'
@@ -420,7 +420,7 @@ $(document).ready(function() {
   });
 
   test("model destroy removes from all collections", 3, function() {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         id: 'number',
         title: 'string'
@@ -438,7 +438,7 @@ $(document).ready(function() {
   });
 
   test("Colllection: non-persisted model destroy removes from all collections", 3, function() {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         id: 'number',
         title: 'string'
@@ -456,7 +456,7 @@ $(document).ready(function() {
   });
 
   test("fetch", 4, function() {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         id: 'number',
         title: 'string'
@@ -507,7 +507,7 @@ $(document).ready(function() {
   });
 
   test("create with validate:true enforces validation", 2, function() {
-    var ValidatingModel = HumanModel.extend({
+    var ValidatingModel = HumanModel.define({
       props: {
         foo: 'string'
       },
@@ -526,7 +526,7 @@ $(document).ready(function() {
   });
 
   test("a failing create returns model with errors", function() {
-    var ValidatingModel = HumanModel.extend({
+    var ValidatingModel = HumanModel.define({
       props: {
         foo: 'string'
       },
@@ -558,7 +558,7 @@ $(document).ready(function() {
   });
 
   test("where and findWhere", 8, function() {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         a: 'number',
         b: 'number'
@@ -604,7 +604,7 @@ $(document).ready(function() {
   });
 
   test("sortedIndex", function () {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         key: 'number'
       }
@@ -658,7 +658,7 @@ $(document).ready(function() {
   });
 
   test("reset passes caller options", 3, function() {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       initialize: function(attrs, options) {
         this.model_parameter = options.model_parameter;
       },
@@ -693,7 +693,7 @@ $(document).ready(function() {
   test("#714: access `model.collection` in a brand new model.", 2, function() {
     var collection = new Backbone.Collection;
     collection.url = '/test';
-    var Model = col.model.extend({
+    var Model = HumanModel.define({
       set: function(attrs) {
         equal(attrs.prop, 'value');
         equal(this.collection, collection);
@@ -714,7 +714,10 @@ $(document).ready(function() {
   });
 
   test("#861, adding models to a collection which do not pass validation, with validate:true", function() {
-      var Model = col.model.extend({
+      var Model = HumanModel.define({
+        props: {
+          id: 'number'
+        },
         validate: function(attrs) {
           if (attrs.id == 3) return "id can't be 3";
         }
@@ -732,7 +735,7 @@ $(document).ready(function() {
   });
 
   test("Invalid models are discarded with validate:true.", 5, function() {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         id: 'number',
         valid: 'boolean'
@@ -751,7 +754,7 @@ $(document).ready(function() {
   });
 
   test("multiple copies of the same model", 3, function() {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         id: 'number',
         title: 'string'
@@ -774,14 +777,14 @@ $(document).ready(function() {
   });
 
   test("#1112 - passing options.model sets collection.model", 2, function() {
-    var Model = col.model.extend({});
+    var Model = HumanModel.define({});
     var c = new Backbone.Collection([{id: 1}], {model: Model});
     ok(c.model === Model);
     ok(c.at(0) instanceof Model);
   });
 
   test("null and undefined are invalid ids.", 2, function() {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         id: 'number'
       }
@@ -811,7 +814,7 @@ $(document).ready(function() {
   });
 
   test("#1412 - Trigger 'request' and 'sync' events.", 4, function() {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         id: 'number'
       }
@@ -900,7 +903,7 @@ $(document).ready(function() {
     var model = {};
     var Collection = Backbone.Collection.extend({
       url: 'test',
-      model: col.model.extend({
+      model: HumanModel.define({
         parse: function(resp) {
           strictEqual(resp, model);
         }
@@ -926,7 +929,7 @@ $(document).ready(function() {
       namespace : [{id: 1}, {id:2}]
     };
     var Collection = Backbone.Collection.extend({
-      model: HumanModel.extend({
+      model: HumanModel.define({
         parse: function(model) {
           model.name = 'test';
           return model;
@@ -952,7 +955,7 @@ $(document).ready(function() {
       namespace : [{id: 1}, {id:2}]
     };
     var Collection = Backbone.Collection.extend({
-      model: HumanModel.extend({
+      model: HumanModel.define({
         parse: function(model) {
           model.name = 'test';
           return model;
@@ -985,7 +988,7 @@ $(document).ready(function() {
   });
 
   test("set", function() {
-    var Model = HumanModel.extend({
+    var Model = HumanModel.define({
       props: {
         id: 'number',
         a: 'number',
@@ -1057,7 +1060,7 @@ $(document).ready(function() {
     var m1 = { _id: 1 };
     var m2 = { _id: 2 };
     var col = Backbone.Collection.extend({
-      model: HumanModel.extend({
+      model: HumanModel.define({
         idAttribute: '_id',
         props: {
           _id: 'number'
@@ -1075,7 +1078,10 @@ $(document).ready(function() {
   */
 
   test("`set` and model level `parse`", function() {
-    var Model = col.model.extend({
+    var Model = HumanModel.define({
+      props: {
+        id: 'number'
+      },
       parse: function (res) { return res.model; }
     });
     var Collection = Backbone.Collection.extend({
@@ -1093,7 +1099,7 @@ $(document).ready(function() {
 
   test("`set` data is only parsed once", function() {
     var collection = new Backbone.Collection();
-    collection.model = HumanModel.extend({
+    collection.model = HumanModel.define({
       props: {
         parsed: 'boolean'
       },
@@ -1138,7 +1144,7 @@ $(document).ready(function() {
   /*
   test("`set` with non-normal id", function() {
     var Collection = Backbone.Collection.extend({
-      model: col.model.extend({idAttribute: '_id'})
+      model: HumanModel.define({idAttribute: '_id'})
     });
     var collection = new Collection({_id: 1});
     collection.set([{_id: 1, a: 1}], {add: false});
@@ -1199,7 +1205,7 @@ $(document).ready(function() {
 
   test("`add` only `sort`s when necessary with comparator function", 3, function () {
     var collection = new (Backbone.Collection.extend({
-      model: HumanModel.extend({
+      model: HumanModel.define({
         props: {
           id: 'number',
           a: 'number',

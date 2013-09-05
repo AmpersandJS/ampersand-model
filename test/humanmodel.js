@@ -48,7 +48,7 @@ $(function() {
         }
       };
 
-      Foo = HumanModel.extend(definition);
+      Foo = HumanModel.define(definition);
       Collection = Backbone.Collection.extend({
         url : function() { return '/collection'; }
       });
@@ -66,7 +66,7 @@ $(function() {
 
   test('should be sealable', 2, function () {
     definition.seal = true;
-    var Bar = HumanModel.extend(definition);
+    var Bar = HumanModel.define(definition);
     var bar = new Bar();
     throws(function () {
       "use strict";
@@ -97,7 +97,7 @@ $(function() {
   });
 
   test('Setting other properties when `extraProperties: "reject"` throws error', 1, function () {
-    var Foo = HumanModel.extend({
+    var Foo = HumanModel.define({
       extraProperties: 'reject'
     });
     var foo = new Foo();
@@ -122,8 +122,6 @@ $(function() {
     foo.set({
       craziness: 'new'
     });
-    window.foo = foo;
-    //debugger;
     equal(foo.get('craziness'), 'new');
   });
 
@@ -222,7 +220,7 @@ $(function() {
   });
 
   test('should fire event on derived properties, even if dependent on ad hoc prop.', 1, function () {
-    var Foo = new HumanModel.extend({
+    var Foo = new HumanModel.define({
       extraProperties: 'allow',
       derived: {
         isCrazy: {
@@ -233,6 +231,7 @@ $(function() {
         }
       }
     });
+    var foo = new Foo();
     foo.extraProperties = 'allow';
     foo.on('change:isCrazy', function () {
       ok(true);
@@ -264,7 +263,7 @@ $(function() {
   test('derived properties', function () {
     var ran = 0;
     var notCachedRan = 0;
-    var Foo = HumanModel.extend({
+    var Foo = HumanModel.define({
       props: {
         name: ['string', true]
       },
@@ -305,7 +304,7 @@ $(function() {
 
   test('derived properties with derived dependencies', 5, function () {
     var ran = 0;
-    var Foo = HumanModel.extend({
+    var Foo = HumanModel.define({
       props: {
         name: ['string', true]
       },
@@ -343,6 +342,20 @@ $(function() {
     });
     foo.name = 'something';
     equal(ran, 4);
+  });
+
+  test('derived properties triggered with multiple instances', 2, function () {
+    var foo = new Foo({firstName: 'Silly', lastName: 'Fool'});
+    var bar = new Foo({firstName: 'Bar', lastName: 'Man'});
+
+    foo.on('change:name', function () {
+      ok('name changed');
+    });
+    foo.firstName = 'bob';
+    bar.on('change:name', function () {
+      ok('name changed');
+    });
+    bar.firstName = 'bob too';
   });
 
   test('should fire a remove event', 1, function (next) {

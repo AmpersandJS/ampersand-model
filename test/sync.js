@@ -1,6 +1,6 @@
 $(document).ready(function() {
 
-  var Book = HumanModel.extend({
+  var Book = HumanModel.define({
     props: {
       id: 'string',
       title: 'string',
