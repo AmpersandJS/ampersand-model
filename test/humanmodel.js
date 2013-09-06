@@ -109,7 +109,7 @@ $(function() {
   });
 
   test('Setting other properties ignores them by default', 1, function () {
-    var foo = new HumanModel();
+    var foo = new Foo();
     foo.set({
       craziness: 'new'
     });

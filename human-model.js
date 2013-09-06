@@ -15,17 +15,12 @@
 
   // Require Underscore, if we're on the server, and it's not already present.
   var _ = root._;
+  var define;
   if (!_ && (typeof require !== 'undefined')) _ = require('underscore');
 
   // Require Backbone, if we're on the server, and it's not already present.
   var Backbone = root.Backbone;
   if (!Backbone && (typeof require !== 'undefined')) Backbone = require('backbone');
-
-  if (typeof exports !== 'undefined') {
-    module.exports = HumanModelBase;
-  } else {
-    root.HumanModel = HumanModelBase;
-  }
 
   // Backbone Collection compatibility fix:
   // In backbone, when you add an already instantiated model to a collection
@@ -36,7 +31,7 @@
   // backbone 1.0.0. The only difference is it compares against our HumanModel
   // instead of backbone's.
   Backbone.Collection.prototype._prepareModel = function (attrs, options) {
-    if (attrs instanceof HumanModelBase) {
+    if (attrs._definition) {
       if (!attrs.collection) attrs.collection = this;
       return attrs;
     }
@@ -50,55 +45,21 @@
     return model;
   };
 
-  // Helpers
-  // -------
 
-  // Helper function to define properties
-  var define = function (spec) {
-    spec || (spec = {});
-    var key;
-    var HumanModel = function () {
-      HumanModelBase.apply(this, arguments);
-    };
-
-    HumanModel.prototype = Object.create(HumanModelBase.prototype, {
-      constructor: {
-        value: HumanModel
-      }
-    });
-
-    for (key in spec) {
-      if (key === 'props' || key === 'session') {
-        HumanModel.prototype['_' + key] = spec[key];
-      } else if (key === 'derived') {
-        _.each(spec[key], function (def, name) {
-          createDerivedProperty(HumanModel.prototype, name, def, key === 'session');
-        });
-      } else if (key === 'collections') {
-        HumanModel.prototype._collections = spec[key];
-      } else {
-        HumanModel.prototype[key] = spec[key];
-      }
-    }
-
-    return HumanModel;
-  };
-
-  var createDerivedProperty = function (modelPrototype, name, definition) {
-    var def = modelPrototype._derived[name] = {
+  var createDerivedProperty = function (modelProto, name, definition) {
+    var def = modelProto._derived[name] = {
       fn: _.isFunction(definition) ? definition : definition.fn,
       cache: definition.cache || false,
       depList: definition.deps || []
     };
 
-
     // add to our shared dependency list
     _.each(def.depList, function (dep) {
-      modelPrototype._deps[dep] = _(modelPrototype._deps[dep] || []).union([name]);
+      modelProto._deps[dep] = _(modelProto._deps[dep] || []).union([name]);
     });
 
     // defined a top-level getter for derived names
-    modelPrototype._define(name, {
+    Object.defineProperty(modelProto, name, {
       get: function () {
         // is this a derived property we should cache?
         if (this._derived[name].cache) {
@@ -176,612 +137,629 @@
     }
   });
 
-  // HumanModelBase
+  // HumanModel
   // ------------
+  var registry = new Registry();
 
-  function HumanModelBase(attrs, options) {
-    attrs || (attrs = {});
-    options || (options = {});
-    this.cid = _.uniqueId('model');
-    // set the collection if passed in
-    this.collection = options.collection || undefined;
-    if (options.parse) attrs = this.parse(attrs, options) || {};
-    this.registry = options.registry || HumanModelBase.registry;
-    options._attrs = attrs;
-    this._namespace = options.namespace;
-    this._initted = false;
+  define = function (spec) {
+    spec || (spec = {});
+    var key;
 
-    this._definition = {};
-    this._cache = {};
+    // create our constructor
+    var HumanModel = function (attrs, options) {
+      attrs || (attrs = {});
+      options || (options = {});
+      this.cid = _.uniqueId('model');
+      // set the collection if passed in
+      this.collection = options.collection || undefined;
+      if (options.parse) attrs = this.parse(attrs, options) || {};
+      this.registry = options.registry || registry;
+      options._attrs = attrs;
+      this._namespace = options.namespace;
+      this._initted = false;
+      this._values = {};
+      this._definition = {},
+      this._initProperties();
+      this._initCollections();
+      this._cache = {};
+      this._previousAttributes = {};
 
-    this._initProperties();
-    this._initCollections();
-
-    this.set(attrs, _.extend({silent: true}, options));
-    this.changed = {};
-    this.initialize.apply(this, arguments);
-    if (attrs[this.idAttribute]) this.registry.store(this);
-    this._initted = true;
-    this._previousAttributes = {};
-    if (this.seal) {
-      Object.seal(this);
-    }
-  }
-
-  // singleton main registry
-  HumanModelBase.registry = new Registry();
-  HumanModelBase.Registry = Registry;
-
-  // Attach all inheritable methods to the Model prototype.
-  _.extend(HumanModelBase.prototype, Backbone.Events, {
-    idAttribute: 'id',
-
-    // storage for our rules about derived properties
-    _derived: {},
-    _deps: {},
-
-    // can be allow, ignore, reject
-    extraProperties: 'ignore',
-
-    getId: function () {
-      return this.get(this.idAttribute);
-    },
-
-    // stubbed out to be overwritten
-    initialize: function () {
-      return this;
-    },
-
-    // backbone compatibility
-    parse: function (resp, options) {
-      return resp;
-    },
-
-    // shortcut to define property
-    _define: function (name, def) {
-      Object.defineProperty(this, name, def);
-    },
-
-    // Remove model from the registry and unbind events
-    remove: function () {
-      if (this.getId()) {
-        this.registry.remove(this.type, this.getId(), this._namespace);
+      this.set(attrs, _.extend({silent: true}, options));
+      this._changed = {};
+      this.initialize.apply(this, arguments);
+      if (attrs[this.idAttribute]) this.registry.store(this);
+      this._initted = true;
+      if (this.seal) {
+        Object.seal(this);
       }
-      this.trigger('remove', this);
-      this.off();
-      return this;
-    },
-
-    set: function (key, value, options) {
-      var self = this;
-      var extraProperties = this.extraProperties;
-      var changing, current, previous, changes,
-        newType, interpretedType, newVal, def,
-        attr, attrs, silent, unset, val;
-
-      // Handle both `"key", value` and `{key: value}` -style arguments.
-      if (_.isObject(key) || key === null) {
-        attrs = key;
-        options = value;
-      } else {
-        attrs = {};
-        attrs[key] = value;
-      }
-
-      options = options || {};
-
-      if (!this._validate(attrs, options)) return false;
-
-      // Extract attributes and options.
-      unset = options.unset;
-      silent = options.silent;
-      changes = [];
-      changing = this._changing;
-      this._changing  = true;
-
-      // if not already changing, store previous
-      if (!changing) {
-        this._previousAttributes = this._getAttributes(true);
-        this.changed = {};
-      }
-      current = this.attributes;
-      previous = this._previousAttributes;
-
-      // For each `set` attribute...
-      for (attr in attrs) {
-        val = attrs[attr];
-        newType = typeof val;
-        newVal = val;
-
-        def = this._definition[attr];
-
-        if (!def) {
-          if (extraProperties === 'ignore') {
-            continue;
-          } else if (extraProperties === 'reject') {
-            throw new TypeError('No "' + attr + '" property defined on ' + (this.type || 'this') + ' model and allowOtherProperties not set.');
-          } else if (extraProperties === 'allow') {
-            def = this._createProperty(attr, 'any');
-          }
-        }
-
-        // check type if we have one
-        if (def.type === 'date') {
-          if (!_.isDate(val)) {
-            try {
-              newVal = (new Date(parseInt(val, 10))).valueOf();
-              newType = 'date';
-            } catch (e) {
-              newType = typeof val;
-            }
-          } else {
-            newType = 'date';
-            newVal = val.valueOf();
-          }
-        } else if (def.type === 'array') {
-          newType = _.isArray(val) ? 'array' : typeof val;
-        } else if (def.type === 'object') {
-          // we have to have a way of supporting "missing" objects.
-          // Null is an object, but setting a value to undefined
-          // should work too, IMO. We just override it, in that case.
-          if (typeof val !== 'object' && _.isUndefined(val)) {
-            newVal = null;
-            newType = 'object';
-          }
-        }
-
-        // If we have a defined type and the new type doesn't match, throw error.
-        // Unless it's not required and the value is undefined.
-        if (def.type && def.type !== 'any' && def.type !== newType && (!def.required && !_.isUndefined(val))) {
-          throw new TypeError('Property \'' + attr + '\' must be of type ' + def.type + '. Tried to set ' + val);
-        }
-
-        // if trying to set id after it's already been set
-        // reject that
-        if (def.setOnce && def.value !== undefined && !_.isEqual(def.value, newVal)) {
-          throw new TypeError('Property \'' + key + '\' can only be set once.');
-        }
-
-        // push to changes array if different
-        if (!_.isEqual(def.value, newVal)) {
-          changes.push({prev: def.value, val: newVal, key: attr});
-        }
-
-        // keep track of changed attributes
-        if (!_.isEqual(previous[attr], val)) {
-          self.changed[attr] = val;
-        } else {
-          delete self.changed[attr];
-        }
-      }
-
-      // actually update our values
-      _.each(changes, function (change) {
-        var def = self._definition[change.key];
-        self._previousAttributes && (self._previousAttributes[change.key] = change.prev);
-        if (unset) {
-          delete def.value;
-        } else {
-          def.value = change.val;
-        }
-      });
-
-      var triggers = [];
-
-      function gatherTriggers(key) {
-        triggers.push(key);
-        (self._deps[key] || []).forEach(function (derTrigger) {
-          gatherTriggers(derTrigger);
-        });
-      }
-
-      if (!silent && changes.length) self._pending = true;
-      _.each(changes, function (change) {
-        gatherTriggers(change.key);
-      });
-
-      _.each(_.uniq(triggers), function (key) {
-        delete self._cache[key];
-        if (!silent) self.trigger('change:' + key, self, self[key]);
-      });
-
-      // You might be wondering why there's a `while` loop here. Changes can
-      // be recursively nested within `"change"` events.
-      if (changing) return this;
-      if (!silent) {
-        while (this._pending) {
-          this._pending = false;
-          this.trigger('change', this, options);
-        }
-      }
-      this._pending = false;
-      this._changing = false;
-      return this;
-    },
-
-    get: function (attr) {
-      return this[attr];
-    },
-
-    // Get all of the attributes of the model at the time of the previous
-    // `"change"` event.
-    previousAttributes: function () {
-      return _.clone(this._previousAttributes);
-    },
-
-    save: function (key, val, options) {
-      var attrs, method, xhr, attributes = this.attributes;
-
-      // Handle both `"key", value` and `{key: value}` -style arguments.
-      if (key == null || typeof key === 'object') {
-        attrs = key;
-        options = val;
-      } else {
-        (attrs = {})[key] = val;
-      }
-
-      options = _.extend({validate: true}, options);
-
-      // If we're not waiting and attributes exist, save acts as
-      // `set(attr).save(null, opts)` with validation. Otherwise, check if
-      // the model will be valid when the attributes, if any, are set.
-      if (attrs && !options.wait) {
-        if (!this.set(attrs, options)) return false;
-      } else {
-        if (!this._validate(attrs, options)) return false;
-      }
-
-      // After a successful server-side save, the client is (optionally)
-      // updated with the server-side state.
-      if (options.parse === void 0) options.parse = true;
-      var model = this;
-      var success = options.success;
-      options.success = function (resp) {
-        var serverAttrs = model.parse(resp, options);
-        if (options.wait) serverAttrs = _.extend(attrs || {}, serverAttrs);
-        if (_.isObject(serverAttrs) && !model.set(serverAttrs, options)) {
-          return false;
-        }
-        if (success) success(model, resp, options);
-        model.trigger('sync', model, resp, options);
-      };
-      wrapError(this, options);
-
-      method = this.isNew() ? 'create' : (options.patch ? 'patch' : 'update');
-      if (method === 'patch') options.attrs = attrs;
-      // if we're waiting we haven't actually set our attributes yet so
-      // we need to do make sure we send right data
-      if (options.wait) options.attrs = _.extend(model.attributes, attrs);
-      xhr = this.sync(method, this, options);
-
-      return xhr;
-    },
-
-    // Fetch the model from the server. If the server's representation of the
-    // model differs from its current attributes, they will be overridden,
-    // triggering a `"change"` event.
-    fetch: function (options) {
-      options = options ? _.clone(options) : {};
-      if (options.parse === void 0) options.parse = true;
-      var model = this;
-      var success = options.success;
-      options.success = function (resp) {
-        //if (!model.set(model.parse(resp, options), options)) return false;
-        if (success) success(model, resp, options);
-        model.trigger('sync', model, resp, options);
-      };
-      wrapError(this, options);
-      return this.sync('read', this, options);
-    },
-
-    // Destroy this model on the server if it was already persisted.
-    // Optimistically removes the model from its collection, if it has one.
-    // If `wait: true` is passed, waits for the server to respond before removal.
-    destroy: function (options) {
-      options = options ? _.clone(options) : {};
-      var model = this;
-      var success = options.success;
-
-      var destroy = function () {
-        model.trigger('destroy', model, model.collection, options);
-      };
-
-      options.success = function (resp) {
-        if (options.wait || model.isNew()) destroy();
-        if (success) success(model, resp, options);
-        if (!model.isNew()) model.trigger('sync', model, resp, options);
-      };
-
-      if (this.isNew()) {
-        options.success();
-        return false;
-      }
-      wrapError(this, options);
-
-      var xhr = this.sync('delete', this, options);
-      if (!options.wait) destroy();
-      return xhr;
-    },
-
-    // Determine if the model has changed since the last `"change"` event.
-    // If you specify an attribute name, determine if that attribute has changed.
-    hasChanged: function (attr) {
-      if (attr == null) return !_.isEmpty(this.changed);
-      return _.has(this.changed, attr);
-    },
-
-    // Return an object containing all the attributes that have changed, or
-    // false if there are no changed attributes. Useful for determining what
-    // parts of a view need to be updated and/or what attributes need to be
-    // persisted to the server. Unset attributes will be set to undefined.
-    // You can also pass an attributes object to diff against the model,
-    // determining if there *would be* a change.
-    changedAttributes: function (diff) {
-      if (!diff) return this.hasChanged() ? _.clone(this.changed) : false;
-      var val, changed = false;
-      var old = this._changing ? this._previousAttributes : this._getAttributes(true);
-      for (var attr in diff) {
-        if (_.isEqual(old[attr], (val = diff[attr]))) continue;
-        (changed || (changed = {}))[attr] = val;
-      }
-      return changed;
-    },
-
-    toJSON: function () {
-      return this.attributes;
-    },
-
-    // Returns `true` if the attribute contains a value that is not null
-    // or undefined.
-    has: function (attr) {
-      return this.get(attr) != null;
-    },
-
-    // Default URL for the model's representation on the server -- if you're
-    // using Backbone's restful methods, override this to change the endpoint
-    // that will be called.
-    url: function () {
-      var base = _.result(this, 'urlRoot') || _.result(this.collection, 'url') || urlError();
-      if (this.isNew()) return base;
-      return base + (base.charAt(base.length - 1) === '/' ? '' : '/') + encodeURIComponent(this.getId());
-    },
-
-    // A model is new if it has never been saved to the server, and lacks an id.
-    isNew: function () {
-      return this.getId() == null;
-    },
-
-    // return copy of model
-    clone: function () {
-      return new this.constructor(this._getAttributes(true));
-    },
-
-    // Check if the model is currently in a valid state.
-    isValid: function (options) {
-      return this._validate({}, _.extend(options || {}, { validate: true }));
-    },
-
-    // return escaped property
-    escape: function (attr) {
-      return _.escape(this[attr]);
-    },
-
-    // Proxy `Backbone.sync` by default -- but override this if you need
-    // custom syncing semantics for *this* particular model.
-    sync: function () {
-      return Backbone.sync.apply(this, arguments);
-    },
-
-    unset: function (attr, options) {
-      var def = this._definition[attr];
-      var type = def.type;
-      var val;
-      if (def.required) {
-        if (!_.isUndefined(def.default)) {
-          val = def.default;
-        } else {
-          val = this._getDefaultForType(type);
-        }
-        return this.set(attr, val, options);
-      } else {
-        return this.set(attr, val, _.extend({}, options, {unset: true}));
-      }
-    },
-
-    clear: function (options) {
-      var self = this;
-      _.each(this._getAttributes(true), function (val, key) {
-        self.unset(key, options);
-      });
-      return this;
-    },
-
-    // Run validation against the next complete set of model attributes,
-    // returning `true` if all is well. Otherwise, fire an `"invalid"` event.
-    _validate: function (attrs, options) {
-      if (!options.validate || !this.validate) return true;
-      attrs = _.extend({}, this.attributes, attrs);
-      var error = this.validationError = this.validate(attrs, options) || null;
-      if (!error) return true;
-      this.trigger('invalid', this, error, _.extend(options || {}, {validationError: error}));
-      return false;
-    },
-
-    // Get default values for a certain type
-    _getDefaultForType: function (type) {
-      if (type === 'string') {
-        return '';
-      } else if (type === 'object') {
-        return {};
-      } else if (type === 'array') {
-        return [];
-      }
-    },
-
-    // convenience methods for manipulating array properties
-    addListVal: function (prop, value, prepend) {
-      var list = _.clone(this[prop]) || [];
-      if (!_(list).contains(value)) {
-        list[prepend ? 'unshift' : 'push'](value);
-        this[prop] = list;
-      }
-      return this;
-    },
-
-    previous: function (attr) {
-      if (attr == null || !Object.keys(this._previousAttributes).length) return null;
-      return this._previousAttributes[attr];
-    },
-
-    removeListVal: function (prop, value) {
-      var list = _.clone(this[prop]) || [];
-      if (_(list).contains(value)) {
-        this[prop] = _(list).without(value);
-      }
-      return this;
-    },
-
-    hasListVal: function (prop, value) {
-      return _.contains(this[prop] || [], value);
-    },
-
-    // -----------------------------------------------------------------------
-
-    _initCollections: function () {
-      var coll;
-      if (!this._collections) return;
-      for (coll in this._collections) {
-        this[coll] = new this._collections[coll]();
-        this[coll].parent = this;
-      }
-    },
-
-    // Check that all required attributes are present
-    _verifyRequired: function () {
-      var attrs = this.attributes;
-      for (var def in this._definition) {
-        if (this._definition[def].required && typeof attrs[def] === 'undefined') {
-          return false;
-        }
-      }
-      return true;
-    },
-
-    _createProperty: function (name, desc, isSession) {
-      var self = this;
-      var def = this._definition[name] = {};
-      var propAttributes = {};
-      var type;
-      if (_.isString(desc)) {
-        // grab our type if all we've got is a string
-        type = this._ensureValidType(desc);
-        if (type) def.type = type;
-      } else {
-        type = this._ensureValidType(desc[0] || desc.type);
-        if (type) def.type = type;
-        if (desc[1] || desc.required) def.required = true;
-        // set default if defined
-        def.value = !_.isUndefined(desc[2]) ? desc[2] : desc.default;
-        if (isSession) def.session = true;
-        if (desc.setOnce) def.setOnce = true;
-        if (def.required && _.isUndefined(def.value)) def.value = this._getDefaultForType(type);
-      }
-
-      // create our setter
-      propAttributes.set = function (val) {
-        self.set(name, val);
-      };
-      // create our getter
-      propAttributes.get = function (val) {
-        if (typeof def.value !== 'undefined') {
-          if (def.type === 'date') {
-            return new Date(def.value);
-          }
-          return def.value;
-        }
-        return;
-      };
-
-      // define our property
-      this._define(name, propAttributes);
-
-      return def;
-    },
-
-    _initProperties: function () {
-      var prop;
-
-      // loop through given properties
-      for (prop in this._props) {
-        this._createProperty(prop, this._props[prop]);
-      }
-      // loop through session props
-      for (prop in this._session) {
-        this._createProperty(prop, this._session[prop], true);
-      }
-    },
-
-    // just makes friendlier errors when trying to define a new model
-    // only used when setting up original property definitions
-    _ensureValidType: function (type) {
-      return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date', 'any'], type) ? type : undefined;
-    },
-
-    _getAttributes: function (includeSession, raw) {
-      var res = {};
-      var val;
-      for (var item in this._definition) {
-        if (!(!includeSession && this._definition[item].session)) {
-          val = (raw) ? this._definition[item].value : this[item];
-          if (val !== undefined) res[item] = val;
-        }
-      }
-      return res;
-    }
-  });
-
-  // Underscore methods that we want to implement on the Model.
-  var modelMethods = ['keys', 'values', 'pairs', 'invert', 'pick', 'omit'];
-
-  // Mix in each Underscore method as a proxy to `Model#attributes`.
-  _.each(modelMethods, function (method) {
-    HumanModelBase.prototype[method] = function () {
-      var args = slice.call(arguments);
-      args.unshift(this.attributes);
-      return _[method].apply(_, args);
     };
-  });
 
-  // add some other getters to our prototype
-  Object.defineProperties(HumanModelBase.prototype, {
-    attributes: {
-      get: function () {
-        return this._getAttributes();
+    // define a few fixed properties
+    Object.defineProperties(HumanModel.prototype, {
+      attributes: {
+        get: function () {
+          return this._getAttributes();
+        }
+      },
+      json: {
+        get: function () {
+          return JSON.stringify(this._getAttributes(false, true));
+        }
+      },
+      derived: {
+        get: function () {
+          var res = {};
+          for (var item in this._derived) res[item] = this._derived[item].fn.apply(this);
+          return res;
+        }
+      },
+      toTemplate: {
+        get: function () {
+          return _.extend(this._getAttributes(true), this.derived);
+        }
       }
-    },
-    json: {
-      get: function () {
-        return JSON.stringify(this._getAttributes(false, true));
-      }
-    },
-    derived: {
-      get: function () {
+    });
+
+    // Attach all inheritable methods to the Model prototype.
+    _.extend(HumanModel.prototype, Backbone.Events, {
+      idAttribute: 'id',
+
+      // storage for our rules about derived properties
+      _derived: {},
+      _deps: {},
+
+      // can be allow, ignore, reject
+      extraProperties: 'ignore',
+
+      getId: function () {
+        return this.get(this.idAttribute);
+      },
+
+      // stubbed out to be overwritten
+      initialize: function () {
+        return this;
+      },
+
+      // backbone compatibility
+      parse: function (resp, options) {
+        return resp;
+      },
+
+      // Remove model from the registry and unbind events
+      remove: function () {
+        if (this.getId()) {
+          this.registry.remove(this.type, this.getId(), this._namespace);
+        }
+        this.trigger('remove', this);
+        this.off();
+        return this;
+      },
+
+      set: function (key, value, options) {
+        var self = this;
+        var extraProperties = this.extraProperties;
+        var changing, current, previous, changes,
+          newType, interpretedType, newVal, def,
+          attr, attrs, silent, unset, currentVal;
+
+        // Handle both `"key", value` and `{key: value}` -style arguments.
+        if (_.isObject(key) || key === null) {
+          attrs = key;
+          options = value;
+        } else {
+          attrs = {};
+          attrs[key] = value;
+        }
+
+        options = options || {};
+
+        if (!this._validate(attrs, options)) return false;
+
+        // Extract attributes and options.
+        unset = options.unset;
+        silent = options.silent;
+        changes = [];
+        changing = this._changing;
+        this._changing  = true;
+
+        // if not already changing, store previous
+        if (!changing) {
+          this._previousAttributes = this._getAttributes(true);
+          this._changed = {};
+        }
+        current = this.attributes;
+        previous = this._previousAttributes;
+
+        // For each `set` attribute...
+        for (attr in attrs) {
+          newVal = attrs[attr];
+          newType = typeof newVal;
+          currentVal = this._values[attr];
+          def = this._definition[attr];
+
+          if (!def) {
+            if (extraProperties === 'ignore') {
+              continue;
+            } else if (extraProperties === 'reject') {
+              throw new TypeError('No "' + attr + '" property defined on ' + (this.type || 'this') + ' model and allowOtherProperties not set.');
+            } else if (extraProperties === 'allow') {
+              def = this._createProperty(attr, 'any');
+            }
+          }
+
+          // check type if we have one
+          if (def.type === 'date') {
+            if (!_.isDate(newVal)) {
+              try {
+                newVal = (new Date(parseInt(newVal, 10))).valueOf();
+                newType = 'date';
+              } catch (e) {
+                newType = typeof newVal;
+              }
+            } else {
+              newType = 'date';
+              newVal = newVal.valueOf();
+            }
+          } else if (def.type === 'array') {
+            newType = _.isArray(newVal) ? 'array' : typeof newVal;
+          } else if (def.type === 'object') {
+            // we have to have a way of supporting "missing" objects.
+            // Null is an object, but setting a value to undefined
+            // should work too, IMO. We just override it, in that case.
+            if (typeof newVal !== 'object' && _.isUndefined(newVal)) {
+              newVal = null;
+              newType = 'object';
+            }
+          }
+
+          // If we have a defined type and the new type doesn't match, throw error.
+          // Unless it's not required and the value is undefined.
+          if (def.type && def.type !== 'any' && def.type !== newType && (!def.required && !_.isUndefined(newVal))) {
+            throw new TypeError('Property \'' + attr + '\' must be of type ' + def.type + '. Tried to set ' + newVal);
+          }
+
+          // if trying to set id after it's already been set
+          // reject that
+          if (def.setOnce && currentVal !== undefined && !_.isEqual(currentVal, newVal)) {
+            throw new TypeError('Property \'' + key + '\' can only be set once.');
+          }
+
+          // push to changes array if different
+          if (!_.isEqual(currentVal, newVal)) {
+            changes.push({prev: currentVal, val: newVal, key: attr});
+          }
+
+          // keep track of changed attributes
+          if (!_.isEqual(previous[attr], newVal)) {
+            self._changed[attr] = newVal;
+          } else {
+            delete self._changed[attr];
+          }
+        }
+
+        // actually update our values
+        _.each(changes, function (change) {
+          self._previousAttributes && (self._previousAttributes[change.key] = change.prev);
+          if (unset) {
+            delete self._values[change.key];
+          } else {
+            self._values[change.key] = change.val;
+          }
+        });
+
+        var triggers = [];
+
+        function gatherTriggers(key) {
+          triggers.push(key);
+          (self._deps[key] || []).forEach(function (derTrigger) {
+            gatherTriggers(derTrigger);
+          });
+        }
+
+        if (!silent && changes.length) self._pending = true;
+        _.each(changes, function (change) {
+          gatherTriggers(change.key);
+        });
+
+        _.each(_.uniq(triggers), function (key) {
+          delete self._cache[key];
+          if (!silent) self.trigger('change:' + key, self, self[key]);
+        });
+
+        // You might be wondering why there's a `while` loop here. Changes can
+        // be recursively nested within `"change"` events.
+        if (changing) return this;
+        if (!silent) {
+          while (this._pending) {
+            this._pending = false;
+            this.trigger('change', this, options);
+          }
+        }
+        this._pending = false;
+        this._changing = false;
+        return this;
+      },
+
+      get: function (attr) {
+        return this[attr];
+      },
+
+      // Get all of the attributes of the model at the time of the previous
+      // `"change"` event.
+      previousAttributes: function () {
+        return _.clone(this._previousAttributes);
+      },
+
+      save: function (key, val, options) {
+        var attrs, method, xhr, attributes = this.attributes;
+
+        // Handle both `"key", value` and `{key: value}` -style arguments.
+        if (key == null || typeof key === 'object') {
+          attrs = key;
+          options = val;
+        } else {
+          (attrs = {})[key] = val;
+        }
+
+        options = _.extend({validate: true}, options);
+
+        // If we're not waiting and attributes exist, save acts as
+        // `set(attr).save(null, opts)` with validation. Otherwise, check if
+        // the model will be valid when the attributes, if any, are set.
+        if (attrs && !options.wait) {
+          if (!this.set(attrs, options)) return false;
+        } else {
+          if (!this._validate(attrs, options)) return false;
+        }
+
+        // After a successful server-side save, the client is (optionally)
+        // updated with the server-side state.
+        if (options.parse === void 0) options.parse = true;
+        var model = this;
+        var success = options.success;
+        options.success = function (resp) {
+          var serverAttrs = model.parse(resp, options);
+          if (options.wait) serverAttrs = _.extend(attrs || {}, serverAttrs);
+          if (_.isObject(serverAttrs) && !model.set(serverAttrs, options)) {
+            return false;
+          }
+          if (success) success(model, resp, options);
+          model.trigger('sync', model, resp, options);
+        };
+        wrapError(this, options);
+
+        method = this.isNew() ? 'create' : (options.patch ? 'patch' : 'update');
+        if (method === 'patch') options.attrs = attrs;
+        // if we're waiting we haven't actually set our attributes yet so
+        // we need to do make sure we send right data
+        if (options.wait) options.attrs = _.extend(model.attributes, attrs);
+        xhr = this.sync(method, this, options);
+
+        return xhr;
+      },
+
+      // Fetch the model from the server. If the server's representation of the
+      // model differs from its current attributes, they will be overridden,
+      // triggering a `"change"` event.
+      fetch: function (options) {
+        options = options ? _.clone(options) : {};
+        if (options.parse === void 0) options.parse = true;
+        var model = this;
+        var success = options.success;
+        options.success = function (resp) {
+          //if (!model.set(model.parse(resp, options), options)) return false;
+          if (success) success(model, resp, options);
+          model.trigger('sync', model, resp, options);
+        };
+        wrapError(this, options);
+        return this.sync('read', this, options);
+      },
+
+      // Destroy this model on the server if it was already persisted.
+      // Optimistically removes the model from its collection, if it has one.
+      // If `wait: true` is passed, waits for the server to respond before removal.
+      destroy: function (options) {
+        options = options ? _.clone(options) : {};
+        var model = this;
+        var success = options.success;
+
+        var destroy = function () {
+          model.trigger('destroy', model, model.collection, options);
+        };
+
+        options.success = function (resp) {
+          if (options.wait || model.isNew()) destroy();
+          if (success) success(model, resp, options);
+          if (!model.isNew()) model.trigger('sync', model, resp, options);
+        };
+
+        if (this.isNew()) {
+          options.success();
+          return false;
+        }
+        wrapError(this, options);
+
+        var xhr = this.sync('delete', this, options);
+        if (!options.wait) destroy();
+        return xhr;
+      },
+
+      // Determine if the model has changed since the last `"change"` event.
+      // If you specify an attribute name, determine if that attribute has changed.
+      hasChanged: function (attr) {
+        if (attr == null) return !_.isEmpty(this._changed);
+        return _.has(this._changed, attr);
+      },
+
+      // Return an object containing all the attributes that have changed, or
+      // false if there are no changed attributes. Useful for determining what
+      // parts of a view need to be updated and/or what attributes need to be
+      // persisted to the server. Unset attributes will be set to undefined.
+      // You can also pass an attributes object to diff against the model,
+      // determining if there *would be* a change.
+      changedAttributes: function (diff) {
+        if (!diff) return this.hasChanged() ? _.clone(this._changed) : false;
+        var val, changed = false;
+        var old = this._changing ? this._previousAttributes : this._getAttributes(true);
+        for (var attr in diff) {
+          if (_.isEqual(old[attr], (val = diff[attr]))) continue;
+          (changed || (changed = {}))[attr] = val;
+        }
+        return changed;
+      },
+
+      toJSON: function () {
+        return this.attributes;
+      },
+
+      // Returns `true` if the attribute contains a value that is not null
+      // or undefined.
+      has: function (attr) {
+        return this.get(attr) != null;
+      },
+
+      // Default URL for the model's representation on the server -- if you're
+      // using Backbone's restful methods, override this to change the endpoint
+      // that will be called.
+      url: function () {
+        var base = _.result(this, 'urlRoot') || _.result(this.collection, 'url') || urlError();
+        if (this.isNew()) return base;
+        return base + (base.charAt(base.length - 1) === '/' ? '' : '/') + encodeURIComponent(this.getId());
+      },
+
+      // A model is new if it has never been saved to the server, and lacks an id.
+      isNew: function () {
+        return this.getId() == null;
+      },
+
+      // return copy of model
+      clone: function () {
+        return new this.constructor(this._getAttributes(true));
+      },
+
+      // Check if the model is currently in a valid state.
+      isValid: function (options) {
+        return this._validate({}, _.extend(options || {}, { validate: true }));
+      },
+
+      // return escaped property
+      escape: function (attr) {
+        return _.escape(this[attr]);
+      },
+
+      // Proxy `Backbone.sync` by default -- but override this if you need
+      // custom syncing semantics for *this* particular model.
+      sync: function () {
+        return Backbone.sync.apply(this, arguments);
+      },
+
+      unset: function (attr, options) {
+        var def = this._definition[attr];
+        var type = def.type;
+        var val;
+        if (def.required) {
+          if (!_.isUndefined(def.default)) {
+            val = def.default;
+          } else {
+            val = this._getDefaultForType(type);
+          }
+          return this.set(attr, val, options);
+        } else {
+          return this.set(attr, val, _.extend({}, options, {unset: true}));
+        }
+      },
+
+      clear: function (options) {
+        var self = this;
+        _.each(this._getAttributes(true), function (val, key) {
+          self.unset(key, options);
+        });
+        return this;
+      },
+
+      // Run validation against the next complete set of model attributes,
+      // returning `true` if all is well. Otherwise, fire an `"invalid"` event.
+      _validate: function (attrs, options) {
+        if (!options.validate || !this.validate) return true;
+        attrs = _.extend({}, this.attributes, attrs);
+        var error = this.validationError = this.validate(attrs, options) || null;
+        if (!error) return true;
+        this.trigger('invalid', this, error, _.extend(options || {}, {validationError: error}));
+        return false;
+      },
+
+      // Get default values for a certain type
+      _getDefaultForType: function (type) {
+        if (type === 'string') {
+          return '';
+        } else if (type === 'object') {
+          return {};
+        } else if (type === 'array') {
+          return [];
+        }
+      },
+
+      // convenience methods for manipulating array properties
+      addListVal: function (prop, value, prepend) {
+        var list = _.clone(this[prop]) || [];
+        if (!_(list).contains(value)) {
+          list[prepend ? 'unshift' : 'push'](value);
+          this[prop] = list;
+        }
+        return this;
+      },
+
+      previous: function (attr) {
+        if (attr == null || !Object.keys(this._previousAttributes).length) return null;
+        return this._previousAttributes[attr];
+      },
+
+      removeListVal: function (prop, value) {
+        var list = _.clone(this[prop]) || [];
+        if (_(list).contains(value)) {
+          this[prop] = _(list).without(value);
+        }
+        return this;
+      },
+
+      hasListVal: function (prop, value) {
+        return _.contains(this[prop] || [], value);
+      },
+
+      // -----------------------------------------------------------------------
+
+      _initCollections: function () {
+        var coll;
+        if (!this._collections) return;
+        for (coll in this._collections) {
+          this[coll] = new this._collections[coll]();
+          this[coll].parent = this;
+        }
+      },
+
+      // Check that all required attributes are present
+      _verifyRequired: function () {
+        var attrs = this.attributes;
+        for (var def in this._definition) {
+          if (this._definition[def].required && typeof attrs[def] === 'undefined') {
+            return false;
+          }
+        }
+        return true;
+      },
+
+      _createProperty: function (name, desc, isSession) {
+        var self = this;
+        var def = this._definition[name] = {};
+        var propAttributes = {};
+        var type;
+        if (_.isString(desc)) {
+          // grab our type if all we've got is a string
+          type = this._ensureValidType(desc);
+          if (type) def.type = type;
+        } else {
+          type = this._ensureValidType(desc[0] || desc.type);
+          if (type) def.type = type;
+          if (desc[1] || desc.required) def.required = true;
+          // set default if defined
+          self._values[name] = !_.isUndefined(desc[2]) ? desc[2] : desc.default;
+          if (isSession) def.session = true;
+          if (desc.setOnce) def.setOnce = true;
+          if (def.required && _.isUndefined(self._values[name])) self._values[name] = this._getDefaultForType(type);
+        }
+
+        // create our setter
+        propAttributes.set = function (val) {
+          self.set(name, val);
+        };
+        // create our getter
+        propAttributes.get = function (val) {
+
+        };
+
+        // define our property
+        Object.defineProperty(this, name, {
+          set: function (val) {
+            self.set(name, val);
+          },
+          get: function () {
+            if (typeof self._values[name] !== 'undefined') {
+              if (def.type === 'date') {
+                return new Date(self._values[name]);
+              }
+              return self._values[name];
+            }
+            return;
+          }
+        });
+
+        return def;
+      },
+
+      _initProperties: function () {
+        var prop;
+
+        // loop through given properties
+        for (prop in this._props) {
+          this._createProperty(prop, this._props[prop]);
+        }
+        // loop through session props
+        for (prop in this._session) {
+          this._createProperty(prop, this._session[prop], true);
+        }
+      },
+
+      // just makes friendlier errors when trying to define a new model
+      // only used when setting up original property definitions
+      _ensureValidType: function (type) {
+        return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date', 'any'], type) ? type : undefined;
+      },
+
+      _getAttributes: function (includeSession, raw) {
         var res = {};
-        for (var item in this._derived) res[item] = this._derived[item].fn.apply(this);
+        var val;
+        for (var item in this._definition) {
+          if (!(!includeSession && this._definition[item].session)) {
+            val = (raw) ? this._values[item] : this[item];
+            if (val !== undefined) res[item] = val;
+          }
+        }
         return res;
       }
-    },
-    toTemplate: {
-      get: function () {
-        return _.extend(this._getAttributes(true), this.derived);
+    });
+
+    // Underscore methods that we want to implement on the Model.
+    var modelMethods = ['keys', 'values', 'pairs', 'invert', 'pick', 'omit'];
+
+    // Mix in each Underscore method as a proxy to `Model#attributes`.
+    _.each(modelMethods, function (method) {
+      HumanModel.prototype[method] = function () {
+        var args = slice.call(arguments);
+        args.unshift(this.attributes);
+        return _[method].apply(_, args);
+      };
+    });
+
+    for (key in spec) {
+      if (key === 'props' || key === 'session') {
+        HumanModel.prototype['_' + key] = spec[key];
+      } else if (key === 'derived') {
+        _.each(spec[key], function (def, name) {
+          createDerivedProperty(HumanModel.prototype, name, def);
+        });
+      } else if (key === 'collections') {
+        HumanModel.prototype._collections = spec[key];
+      } else {
+        HumanModel.prototype[key] = spec[key];
       }
     }
-  });
 
-  // Create our method for defining models
-  HumanModelBase.define = define;
+    HumanModel.registry = registry;
 
-  HumanModelBase.prototype.init = HumanModelBase.prototype.initialize;
+    HumanModel.prototype.init = HumanModel.prototype.initialize;
+
+    return HumanModel;
+  };
 
   // Wrap an optional error callback with a fallback error event.
   var wrapError = function (model, options) {
@@ -796,5 +774,17 @@
   var urlError = function () {
     throw new Error('A "url" property or function must be specified');
   };
+
+  var out = {
+    define: define,
+    registry: registry,
+    Registry: Registry
+  };
+
+  if (typeof exports !== 'undefined') {
+    module.exports = out;
+  } else {
+    window.HumanModel = out;
+  }
 
 }).call(this);
