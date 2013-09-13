@@ -49,7 +49,7 @@
   var createDerivedProperty = function (modelProto, name, definition) {
     var def = modelProto._derived[name] = {
       fn: _.isFunction(definition) ? definition : definition.fn,
-      cache: definition.cache || false,
+      cache: (definition.cache !== false),
       depList: definition.deps || []
     };
 
@@ -70,8 +70,8 @@
         }
       },
       set: function (name) {
-        var deps = this._derived[name].deps,
-          msg = '"' + name + '" is a derived property, you can\'t set it directly.';
+        var deps = this._derived[name].deps;
+        var msg = '"' + name + '" is a derived property, you can\'t set it directly.';
         if (deps && deps.length) {
           throw new TypeError(msg + ' It is dependent on "' + deps.join('" and "') + '".');
         } else {
@@ -239,7 +239,7 @@
       set: function (key, value, options) {
         var self = this;
         var extraProperties = this.extraProperties;
-        var changing, current, previous, changes,
+        var changing, previous, changes,
           newType, interpretedType, newVal, def,
           attr, attrs, silent, unset, currentVal;
 
@@ -261,14 +261,13 @@
         silent = options.silent;
         changes = [];
         changing = this._changing;
-        this._changing  = true;
+        this._changing = true;
 
         // if not already changing, store previous
         if (!changing) {
           this._previousAttributes = this._getAttributes(true);
           this._changed = {};
         }
-        current = this.attributes;
         previous = this._previousAttributes;
 
         // For each `set` attribute...
@@ -363,7 +362,11 @@
         });
 
         _.each(_.uniq(triggers), function (key) {
-          delete self._cache[key];
+          var derived = self._derived[key];
+          if (derived && derived.cache) {
+            self._previousAttributes[key] = self._cache[key];
+            delete self._cache[key];
+          }
           if (!silent) self.trigger('change:' + key, self, self[key]);
         });
 
@@ -640,7 +643,7 @@
 
       // Check that all required attributes are present
       _verifyRequired: function () {
-        var attrs = this.attributes;
+        var attrs = this._getAttributes(true); // should include session
         for (var def in this._definition) {
           if (this._definition[def].required && typeof attrs[def] === 'undefined') {
             return false;
@@ -652,7 +655,6 @@
       _createProperty: function (name, desc, isSession) {
         var self = this;
         var def = this._definition[name] = {};
-        var propAttributes = {};
         var type;
         if (_.isString(desc)) {
           // grab our type if all we've got is a string
@@ -668,15 +670,6 @@
           if (desc.setOnce) def.setOnce = true;
           if (def.required && _.isUndefined(self._values[name])) self._values[name] = this._getDefaultForType(type);
         }
-
-        // create our setter
-        propAttributes.set = function (val) {
-          self.set(name, val);
-        };
-        // create our getter
-        propAttributes.get = function (val) {
-
-        };
 
         // define our property
         Object.defineProperty(this, name, {

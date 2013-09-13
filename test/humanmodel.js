@@ -22,6 +22,9 @@ $(function() {
           list: ['array'],
           myBool: ['boolean', true, false]
         },
+        session: {
+          active: ['boolean', true, true]
+        },
         derived: {
           name: {
             deps: ['firstName', 'lastName'],
@@ -31,6 +34,7 @@ $(function() {
           },
           initials: {
             deps: ['firstName', 'lastName'],
+            cache: false,
             fn: function () {
               // This currently breaks without both deps being set
               if (this.firstName && this.lastName) {
@@ -198,6 +202,7 @@ $(function() {
       myBool: false
     });
     deepEqual(foo.toTemplate, {
+      active: true,
       firstName: 'bob',
       lastName: 'tom',
       thing: 'abc',
@@ -269,7 +274,6 @@ $(function() {
       },
       derived: {
         greeting: {
-          cache: true,
           deps: ['name'],
           fn: function () {
             ran++;
@@ -277,6 +281,7 @@ $(function() {
           }
         },
         notCached: {
+          cache: false,
           deps: ['name'],
           fn: function () {
             notCachedRan++
@@ -414,4 +419,38 @@ $(function() {
     s.name = 'superman'; // ridiculous, right?
   });
 
+  test('Calling `previous` during change of derived cached property should work', 2, function () {
+    var foo = new Foo({firstName: 'Henrik', lastName: 'Joreteg'});
+    var ran = false;
+    foo.on('change:name', function () {
+      if (!ran) {
+        equal(typeof foo.previous('name'), 'undefined');
+        ran = true;
+      } else {
+        equal(foo.previous('name'), 'Crazy Joreteg');
+      }
+    });
+
+    foo.firstName = 'Crazy';
+    foo.firstName = 'Lance!';
+  });
+
+  test('Calling `previous` during change of derived property that is not cached, should be `undefined`', 1, function () {
+    var foo = new Foo({firstName: 'Henrik', lastName: 'Joreteg'});
+
+    // the initials property is explicitly not cached
+    // so you should not be able to get a previous value
+    // for it.
+    foo.on('change:initials', function () {
+      equal(typeof foo.previous('initials'), 'undefined');
+    });
+
+    foo.firstName = 'Crazy';
+  });
+
+  test('`.json` should not include session or derived properties', 1, function () {
+    var foo = new Foo({firstName: 'Henrik', lastName: 'Joreteg'});
+    foo.active = true;
+    strictEqual(typeof JSON.parse(foo.json).active, 'undefined');
+  });
 });
