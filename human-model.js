@@ -141,6 +141,33 @@
   // ------------
   var registry = new Registry();
 
+  var dataTypes = {
+    date: {
+      set: function (newVal) {
+        var newType;
+        if (!_.isDate(newVal)) {
+          try {
+            newVal = (new Date(parseInt(newVal, 10))).valueOf();
+            newType = 'date';
+          } catch (e) {
+            newType = typeof newVal;
+          }
+        } else {
+          newType = 'date';
+          newVal = newVal.valueOf();
+        }
+        return {
+          val: newVal,
+          type: newType
+        };
+      },
+      get: function (val) {
+        return new Date(val);
+      }
+    }
+  };
+  
+
   define = function (spec) {
     spec || (spec = {});
     var key;
@@ -288,18 +315,10 @@
           }
 
           // check type if we have one
-          if (def.type === 'date') {
-            if (!_.isDate(newVal)) {
-              try {
-                newVal = (new Date(parseInt(newVal, 10))).valueOf();
-                newType = 'date';
-              } catch (e) {
-                newType = typeof newVal;
-              }
-            } else {
-              newType = 'date';
-              newVal = newVal.valueOf();
-            }
+          if (dataTypes[def.type]) {
+            var cast = dataTypes[def.type].set(newVal);
+            newVal = cast.val;
+            newType = cast.type;
           } else if (def.type === 'array') {
             newType = _.isArray(newVal) ? 'array' : typeof newVal;
           } else if (def.type === 'object') {
@@ -678,8 +697,8 @@
           },
           get: function () {
             if (typeof self._values[name] !== 'undefined') {
-              if (def.type === 'date') {
-                return new Date(self._values[name]);
+              if (dataTypes[def.type] && dataTypes[def.type].get) {
+                return dataTypes[def.type].get(self._values[name]);
               }
               return self._values[name];
             }
@@ -706,7 +725,7 @@
       // just makes friendlier errors when trying to define a new model
       // only used when setting up original property definitions
       _ensureValidType: function (type) {
-        return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date', 'any'], type) ? type : undefined;
+        return _.contains(['string', 'number', 'boolean', 'array', 'object', 'date', 'any'].concat(_.keys(dataTypes)), type) ? type : undefined;
       },
 
       _getAttributes: function (includeSession, raw) {
@@ -772,7 +791,8 @@
   var out = {
     define: define,
     registry: registry,
-    Registry: Registry
+    Registry: Registry,
+    dataTypes: dataTypes
   };
 
   if (typeof exports !== 'undefined') {
