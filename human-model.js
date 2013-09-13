@@ -340,7 +340,7 @@
 
         // actually update our values
         _.each(changes, function (change) {
-          self._previousAttributes && (self._previousAttributes[change.key] = change.prev);
+          self._previousAttributes[change.key] = change.prev;
           if (unset) {
             delete self._values[change.key];
           } else {
