@@ -401,4 +401,17 @@ $(function() {
     strictEqual(bar.lastName, '');
   });
 
+  test('should be able to bind events even if sealed', 2, function () {
+    var SealedModel = HumanModel.define({seal: true, props: {name: 'string'}});
+
+    var s = new SealedModel({name: 'henrik'});
+
+    equal(s.name, 'henrik', 'should have set name');
+    s.on('change:name', function () {
+      ok(true, 'event was triggered.');
+    });
+
+    s.name = 'superman'; // ridiculous, right?
+  });
+
 });

@@ -163,6 +163,7 @@
       this._initCollections();
       this._cache = {};
       this._previousAttributes = {};
+      this._events = {};
 
       this.set(attrs, _.extend({silent: true}, options));
       this._changed = {};
