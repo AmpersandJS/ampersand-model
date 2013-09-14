@@ -94,6 +94,14 @@ $(function() {
     catch (err) { ok(err instanceof TypeError); }
   });
 
+  test('Error when setting derived property should be helpful', function () {
+    var foo = new Foo();
+    try { foo.name = 'bob'; }
+    catch (err) {
+      equal(err.message, "\"name\" is a derived property, it can't be set directly.");
+    }
+  });
+
   test('should get correct defaults', function () {
     var foo = new Foo({});
     strictEqual(foo.firstName, 'defaults');

@@ -28,10 +28,11 @@
   // the problem is, it does this witn an instanceof check. We're wanting to
   // use completely different models so the instanceof will fail even if they
   // are "real" models. So we work around this by overwriting this method from
-  // backbone 1.0.0. The only difference is it compares against our HumanModel
-  // instead of backbone's.
+  // backbone 1.0.0. The only difference is it looks for an initialize method
+  // (which both Backbone and HumanModel will always have) to determine whether
+  // an instantiated model or a simple object is being passed in.
   Backbone.Collection.prototype._prepareModel = function (attrs, options) {
-    if (attrs._definition) {
+    if (_.isFunction(attrs.initialize)) {
       if (!attrs.collection) attrs.collection = this;
       return attrs;
     }
@@ -69,14 +70,8 @@
           return this._derived[name].fn.apply(this);
         }
       },
-      set: function (value) {
-        var deps = this._derived[name].deps;
-        var msg = '"' + name + '" is a derived property, you can\'t set it directly.';
-        if (deps && deps.length) {
-          throw new TypeError(msg + ' It is dependent on "' + deps.join('" and "') + '".');
-        } else {
-          throw new TypeError(msg);
-        }
+      set: function () {
+        throw new TypeError('"' + name + '" is a derived property, it can\'t be set directly.');
       }
     });
   };
