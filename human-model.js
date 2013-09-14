@@ -69,7 +69,7 @@
           return this._derived[name].fn.apply(this);
         }
       },
-      set: function (name) {
+      set: function (value) {
         var deps = this._derived[name].deps;
         var msg = '"' + name + '" is a derived property, you can\'t set it directly.';
         if (deps && deps.length) {
