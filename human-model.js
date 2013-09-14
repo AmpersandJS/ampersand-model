@@ -136,6 +136,7 @@
   // ------------
   var registry = new Registry();
 
+  // our dataTypes
   var dataTypes = {
     date: {
       set: function (newVal) {
@@ -159,9 +160,32 @@
       get: function (val) {
         return new Date(val);
       }
+    },
+    array: {
+      set: function (newVal) {
+        return {
+          val: newVal,
+          type: _.isArray(newVal) ? 'array' : typeof newVal
+        };
+      }
+    },
+    object: {
+      set: function (newVal) {
+        var newType = typeof newVal;
+        // we have to have a way of supporting "missing" objects.
+        // Null is an object, but setting a value to undefined
+        // should work too, IMO. We just override it, in that case.
+        if (newType !== 'object' && _.isUndefined(newVal)) {
+          newVal = null;
+          newType = 'object';
+        }
+        return {
+          val: newVal,
+          type: newType
+        };
+      }
     }
   };
-  
 
   define = function (spec) {
     spec || (spec = {});
@@ -314,16 +338,6 @@
             var cast = dataTypes[def.type].set(newVal);
             newVal = cast.val;
             newType = cast.type;
-          } else if (def.type === 'array') {
-            newType = _.isArray(newVal) ? 'array' : typeof newVal;
-          } else if (def.type === 'object') {
-            // we have to have a way of supporting "missing" objects.
-            // Null is an object, but setting a value to undefined
-            // should work too, IMO. We just override it, in that case.
-            if (typeof newVal !== 'object' && _.isUndefined(newVal)) {
-              newVal = null;
-              newType = 'object';
-            }
           }
 
           // If we have a defined type and the new type doesn't match, throw error.
@@ -691,11 +705,12 @@
             self.set(name, val);
           },
           get: function () {
-            if (typeof self._values[name] !== 'undefined') {
+            var result = self._values[name];
+            if (typeof result !== 'undefined') {
               if (dataTypes[def.type] && dataTypes[def.type].get) {
-                return dataTypes[def.type].get(self._values[name]);
+                return dataTypes[def.type].get(result);
               }
-              return self._values[name];
+              return result;
             }
             return;
           }
