@@ -346,7 +346,7 @@
 
         function gatherTriggers(key) {
           triggers.push(key);
-          (self._deps[key] || []).forEach(function (derTrigger) {
+          _.each((self._deps[key] || []), function (derTrigger) {
             gatherTriggers(derTrigger);
           });
         }
