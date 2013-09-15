@@ -461,4 +461,33 @@ $(function() {
     foo.active = true;
     strictEqual(typeof JSON.parse(foo.json).active, 'undefined');
   });
+
+  test('Should be able to define and use custom data types', 1, function () {
+    var previousTypes = _.clone(HumanModel.dataTypes);
+
+    HumanModel.dataTypes.crazyType = {
+      set: function (newVal) {
+        return {
+          val: newVal,
+          type: 'crazyType'
+        };
+      },
+      get: function (val) {
+        return val + 'crazy!'
+      }
+    };
+
+    var Foo = HumanModel.define({
+      props:{
+        silliness: 'crazyType'
+      }
+    });
+
+    var foo = new Foo({silliness: 'you '});
+
+    equal(foo.silliness, 'you crazy!');
+
+    // reset it
+    HumanModel.dataTypes = previousTypes;
+  });
 });

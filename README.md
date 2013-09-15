@@ -183,11 +183,16 @@ An extensive suite of tests can be run by opening `test/index.html` in a browser
 
 ## Authors
 
-Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions from [@beausorensen](http://twitter.com/beausorensen) and [@LanceStout](https://twitter.com/lancestout).;
+Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions from:
+
+- [@beausorensen](http://twitter.com/beausorensen)
+- [@LanceStout](https://twitter.com/lancestout)
+- [@philip_roberts](https://twitter.com/philip_roberts)
 
 
 ## Changelog
 
+ - 1.2.0 - Make it possible to overwrite or extend data types.
  - 1.0.0 - Switching from `extend()` to `define()` pattern for building a model definition.
 
 ## License
