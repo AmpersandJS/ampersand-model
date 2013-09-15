@@ -9,6 +9,10 @@
         {
           "name": "Lance Stout",
           "email": "lance@andyet.net"
+        },
+        {
+          "name": "Philip Roberts",
+          "email": "phil@andyet.net"
         } 
     ],
     "repository": {
