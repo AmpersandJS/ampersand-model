@@ -201,13 +201,15 @@ $(function() {
       'firstName',
       'lastName',
       'thing',
-      'myBool'
+      'myBool',
+      'active'
     ]);
     deepEqual(foo.attributes, {
       firstName: 'bob',
       lastName: 'tom',
       thing: 'abc',
-      myBool: false
+      myBool: false,
+      active: true
     });
     deepEqual(foo.toTemplate, {
       active: true,
@@ -217,6 +219,12 @@ $(function() {
       name: 'bob tom',
       isCrazy: false,
       initials: 'BT',
+      myBool: false
+    });
+    deepEqual(foo.toServer, {
+      firstName: 'bob',
+      lastName: 'tom',
+      thing: 'abc',
       myBool: false
     });
   });

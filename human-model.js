@@ -230,7 +230,7 @@
       },
       json: {
         get: function () {
-          return JSON.stringify(this._getAttributes(false, true));
+          return JSON.stringify(this.toServer);
         }
       },
       derived: {
@@ -243,6 +243,11 @@
       toTemplate: {
         get: function () {
           return _.extend(this._getAttributes(true), this.derived);
+        }
+      },
+      toServer: {
+        get: function () {
+          return this._getAttributes(false, true);
         }
       }
     });
@@ -464,7 +469,7 @@
         if (method === 'patch') options.attrs = attrs;
         // if we're waiting we haven't actually set our attributes yet so
         // we need to do make sure we send right data
-        if (options.wait) options.attrs = _.extend(model.attributes, attrs);
+        if (options.wait) options.attrs = _.extend(model.toServer, attrs);
         xhr = this.sync(method, this, options);
 
         return xhr;
@@ -742,7 +747,7 @@
         var res = {};
         var val;
         for (var item in this._definition) {
-          if (!(!includeSession && this._definition[item].session)) {
+          if (!(includeSession === false && this._definition[item].session)) {
             val = (raw) ? this._values[item] : this[item];
             if (val !== undefined) res[item] = val;
           }
