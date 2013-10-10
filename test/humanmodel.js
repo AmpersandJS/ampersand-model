@@ -229,6 +229,33 @@ $(function() {
     });
   });
 
+  test('toServer should not include session properties no matter how they\'re defined.', function () {
+    var Foo = HumanModel.define({
+      props: {
+        name: 'string'
+      },
+      session: {
+        // simple definintion
+        active: 'boolean'
+      }
+    });
+
+    var Bar = HumanModel.define({
+      props: {
+        name: 'string'
+      },
+      session: {
+        // fuller definition
+        active: ['boolean', true, false]
+      }
+    });
+
+    var foo = new Foo({name: 'hi', active: true});
+    var bar = new Bar({name: 'hi', active: true});
+    deepEqual(foo.toServer, {name: 'hi'});
+    deepEqual(bar.toServer, {name: 'hi'});
+  });
+
   test('should fire events normally for properties defined on the fly', 1, function (next) {
     var foo = new Foo();
     foo.extraProperties = 'allow';

@@ -225,7 +225,7 @@
     Object.defineProperties(HumanModel.prototype, {
       attributes: {
         get: function () {
-          return this._getAttributes();
+          return this._getAttributes(true);
         }
       },
       json: {
@@ -546,7 +546,7 @@
       },
 
       toJSON: function () {
-        return this.attributes;
+        return this.toServer;
       },
 
       // Returns `true` if the attribute contains a value that is not null
@@ -699,10 +699,10 @@
           if (desc[1] || desc.required) def.required = true;
           // set default if defined
           self._values[name] = !_.isUndefined(desc[2]) ? desc[2] : desc.default;
-          if (isSession) def.session = true;
           if (desc.setOnce) def.setOnce = true;
           if (def.required && _.isUndefined(self._values[name])) self._values[name] = this._getDefaultForType(type);
         }
+        if (isSession) def.session = true;
 
         // define our property
         Object.defineProperty(this, name, {
@@ -747,7 +747,7 @@
         var res = {};
         var val;
         for (var item in this._definition) {
-          if (!(includeSession === false && this._definition[item].session)) {
+          if (!this._definition[item].session || (includeSession && this._definition[item].session)) {
             val = (raw) ? this._values[item] : this[item];
             if (val !== undefined) res[item] = val;
           }
