@@ -204,8 +204,6 @@
       this._namespace = options.namespace;
       this._initted = false;
       this._values = {};
-      this._definition = {},
-      this._initProperties();
       this._initCollections();
       this._cache = {};
       this._previousAttributes = {};
@@ -252,6 +250,8 @@
       }
     });
 
+
+
     // Attach all inheritable methods to the Model prototype.
     _.extend(HumanModel.prototype, Backbone.Events, {
       idAttribute: 'id',
@@ -259,6 +259,7 @@
       // storage for our rules about derived properties
       _derived: {},
       _deps: {},
+      _definition: {},
 
       // can be allow, ignore, reject
       extraProperties: 'ignore',
@@ -334,7 +335,7 @@
             } else if (extraProperties === 'reject') {
               throw new TypeError('No "' + attr + '" property defined on ' + (this.type || 'this') + ' model and allowOtherProperties not set.');
             } else if (extraProperties === 'allow') {
-              def = this._createProperty(attr, 'any');
+              def = this._createPropertyDefinition(attr, 'any');
             }
           }
 
@@ -685,7 +686,7 @@
         return true;
       },
 
-      _createProperty: function (name, desc, isSession) {
+      _createPropertyDefinition: function (name, desc, isSession) {
         var self = this;
         var def = this._definition[name] = {};
         var type;
@@ -698,43 +699,31 @@
           if (type) def.type = type;
           if (desc[1] || desc.required) def.required = true;
           // set default if defined
-          self._values[name] = !_.isUndefined(desc[2]) ? desc[2] : desc.default;
+          def.default = !_.isUndefined(desc[2]) ? desc[2] : desc.default;
           if (desc.setOnce) def.setOnce = true;
-          if (def.required && _.isUndefined(self._values[name])) self._values[name] = this._getDefaultForType(type);
+          if (def.required && _.isUndefined(def.default)) def.default = this._getDefaultForType(type);
         }
         if (isSession) def.session = true;
 
-        // define our property
-        Object.defineProperty(this, name, {
+        // define a getter/setter on the prototype
+        // but they get/set on the instance
+        Object.defineProperty(self, name, {
           set: function (val) {
-            self.set(name, val);
+            this.set(name, val);
           },
           get: function () {
-            var result = self._values[name];
+            var result = this._values[name];
             if (typeof result !== 'undefined') {
               if (dataTypes[def.type] && dataTypes[def.type].get) {
-                return dataTypes[def.type].get(result);
+                result = dataTypes[def.type].get(result);
               }
               return result;
             }
-            return;
+            return def.default;
           }
         });
 
         return def;
-      },
-
-      _initProperties: function () {
-        var prop;
-
-        // loop through given properties
-        for (prop in this._props) {
-          this._createProperty(prop, this._props[prop]);
-        }
-        // loop through session props
-        for (prop in this._session) {
-          this._createProperty(prop, this._session[prop], true);
-        }
       },
 
       // just makes friendlier errors when trying to define a new model
@@ -745,11 +734,13 @@
 
       _getAttributes: function (includeSession, raw) {
         var res = {};
-        var val;
-        for (var item in this._definition) {
-          if (!this._definition[item].session || (includeSession && this._definition[item].session)) {
+        var val, item, def;
+        for (item in this._definition) {
+          def = this._definition[item];
+          if (!def.session || (includeSession && def.session)) {
             val = (raw) ? this._values[item] : this[item];
-            if (val !== undefined) res[item] = val;
+            if (typeof val === 'undefined') val = def.default;
+            if (typeof val !== 'undefined') res[item] = val;
           }
         }
         return res;
@@ -770,7 +761,10 @@
 
     for (key in spec) {
       if (key === 'props' || key === 'session') {
-        HumanModel.prototype['_' + key] = spec[key];
+        _.each(spec[key], function (def, name) {
+          HumanModel.prototype._createPropertyDefinition.call(HumanModel.prototype, name, def, key === 'session');
+        });
+        //HumanModel.prototype['_' + key] = spec[key];
       } else if (key === 'derived') {
         _.each(spec[key], function (def, name) {
           createDerivedProperty(HumanModel.prototype, name, def);
@@ -783,8 +777,6 @@
     }
 
     HumanModel.registry = registry;
-
-    HumanModel.prototype.init = HumanModel.prototype.initialize;
 
     return HumanModel;
   };

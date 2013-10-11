@@ -192,6 +192,8 @@ Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions
 
 ## Changelog
 
+ - 1.4.0 - Find/fix performance bottleneck. Significantly faster to instantiate larger numbers of models now.
+ - 1.3.0 - Fix bug where session props were included in `.save()`
  - 1.2.0 - Make it possible to overwrite or extend data types.
  - 1.0.0 - Switching from `extend()` to `define()` pattern for building a model definition.
 
