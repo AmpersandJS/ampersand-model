@@ -221,7 +221,7 @@ $(function() {
       initials: 'BT',
       myBool: false
     });
-    deepEqual(foo.toServer, {
+    deepEqual(foo.serialize(), {
       firstName: 'bob',
       lastName: 'tom',
       thing: 'abc',
@@ -229,7 +229,7 @@ $(function() {
     });
   });
 
-  test('toServer should not include session properties no matter how they\'re defined.', function () {
+  test('serialize should not include session properties no matter how they\'re defined.', function () {
     var Foo = HumanModel.define({
       props: {
         name: 'string'
@@ -252,8 +252,8 @@ $(function() {
 
     var foo = new Foo({name: 'hi', active: true});
     var bar = new Bar({name: 'hi', active: true});
-    deepEqual(foo.toServer, {name: 'hi'});
-    deepEqual(bar.toServer, {name: 'hi'});
+    deepEqual(foo.serialize(), {name: 'hi'});
+    deepEqual(bar.serialize(), {name: 'hi'});
   });
 
   test('should fire events normally for properties defined on the fly', 1, function (next) {

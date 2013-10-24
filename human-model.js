@@ -228,7 +228,7 @@
       },
       json: {
         get: function () {
-          return JSON.stringify(this.toServer);
+          return JSON.stringify(this.serialize());
         }
       },
       derived: {
@@ -241,11 +241,6 @@
       toTemplate: {
         get: function () {
           return _.extend(this._getAttributes(true), this.derived);
-        }
-      },
-      toServer: {
-        get: function () {
-          return this._getAttributes(false, true);
         }
       }
     });
@@ -276,6 +271,11 @@
       // backbone compatibility
       parse: function (resp, options) {
         return resp;
+      },
+
+      // serialize does nothing by default
+      serialize: function () {
+        return this._getAttributes(false, true);
       },
 
       // Remove model from the registry and unbind events
@@ -470,7 +470,7 @@
         if (method === 'patch') options.attrs = attrs;
         // if we're waiting we haven't actually set our attributes yet so
         // we need to do make sure we send right data
-        if (options.wait) options.attrs = _.extend(model.toServer, attrs);
+        if (options.wait) options.attrs = _.extend(model.serialize(), attrs);
         xhr = this.sync(method, this, options);
 
         return xhr;
@@ -547,7 +547,7 @@
       },
 
       toJSON: function () {
-        return this.toServer;
+        return this.serialize();
       },
 
       // Returns `true` if the attribute contains a value that is not null
