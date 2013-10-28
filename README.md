@@ -196,6 +196,7 @@ Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions
 
 ## Changelog
 
+ - 2.1.0 - Added allowNull parameter to property definitions
  - 2.0.0 - Minor, but incompatible fix that remove `toServer` getter in lieu of adding `serialize` method that can be overridden.
  - 1.4.0 - Find/fix performance bottleneck. Significantly faster to instantiate larger numbers of models now.
  - 1.3.0 - Fix bug where session props were included in `.save()`
