@@ -346,9 +346,17 @@
             newType = cast.type;
           }
 
-          // If we have a defined type and the new type doesn't match, throw error.
-          // Unless it's not required and the value is undefined.
-          if (def.type && def.type !== 'any' && def.type !== newType && (!def.required && !_.isUndefined(newVal))) {
+          // If we are required but undefined, throw error.
+          // If we are null and are not allowing null, throw error
+          // If we have a defined type and the new type doesn't match, and we are not null, throw error.
+
+          if (_.isUndefined(newVal) && def.required) {
+            throw new TypeError('Required property \'' + attr + '\' must be of type ' + def.type + '. Tried to set ' + newVal);
+          }
+          if (_.isNull(newVal) && def.required && !def.allowNull) {
+            throw new TypeError('Property \'' + attr + '\' must be of type ' + def.type + ' (cannot be null). Tried to set ' + newVal);
+          }
+          if ((def.type && def.type !== 'any' && def.type !== newType) && !_.isNull(newVal) && !_.isUndefined(newVal)) {
             throw new TypeError('Property \'' + attr + '\' must be of type ' + def.type + '. Tried to set ' + newVal);
           }
 
@@ -700,6 +708,7 @@
           if (desc[1] || desc.required) def.required = true;
           // set default if defined
           def.default = !_.isUndefined(desc[2]) ? desc[2] : desc.default;
+          def.allowNull = desc.allowNull ? desc.allowNull : false;
           if (desc.setOnce) def.setOnce = true;
           if (def.required && _.isUndefined(def.default)) def.default = this._getDefaultForType(type);
         }

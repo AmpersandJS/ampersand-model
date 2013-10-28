@@ -33,11 +33,15 @@ Besides that and the obvious differences, any behavior that doesn't match Backbo
 Schema definitions take an attribute called `props` to defined properties.
 
 Property names can be defined two different ways, either an array with `[type, required, default]`,
-or an object: `{ type: 'string', required: true, default: '' }`
+or an object: `{ type: 'string', required: true, default: '' , allowNull: false}`
 
 types can be: `string`, `number`, `boolean`, `array`, `object`, or `date`
 required: true, false (optional)
 default: any (optional)
+allowNull: true, false (optional)
+
+Note that when defining with an array `type`, `required`, and `default`
+are the only property attributes you can set.
 
 ```js
 props: {
