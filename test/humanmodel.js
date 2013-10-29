@@ -20,7 +20,7 @@ $(function() {
           today: ['date'],
           hash: ['object'],
           list: ['array'],
-          myBool: ['boolean', true, false],
+          someNumber: {type: 'number', allowNull: true},
           good: {
               type: 'string',
               validator: function (newVal) {
@@ -541,5 +541,17 @@ $(function() {
       throws(function () {
           foo.good = 'bad';
       }, TypeError, 'Throws exception on invalid attribute value');
+  });
+
+  test('Should only allow nulls where specified', 2, function () {
+    var foo = new Foo({
+      firstName: 'bob',
+      lastName: 'vila',
+      someNumber: null
+    });
+    equal(foo.someNumber, null);
+    throws(function () {
+        foo.firstName = null;
+    }, TypeError, 'Throws exception when setting unallowed null');
   });
 });
