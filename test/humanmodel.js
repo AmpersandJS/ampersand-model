@@ -20,7 +20,15 @@ $(function() {
           today: ['date'],
           hash: ['object'],
           list: ['array'],
-          myBool: ['boolean', true, false]
+          myBool: ['boolean', true, false],
+          good: {
+              type: 'string',
+              validator: function (newVal) {
+                  if (newVal !== 'good') {
+                      return "Value not good";
+                  }
+              }
+          }
         },
         session: {
           active: ['boolean', true, true]
@@ -524,5 +532,14 @@ $(function() {
 
     // reset it
     HumanModel.dataTypes = previousTypes;
+  });
+
+  test('Attribute validation works', 2, function () {
+      var foo = new Foo({good: 'good'});
+      equal(foo.good, 'good');
+
+      throws(function () {
+          foo.good = 'bad';
+      }, TypeError, 'Throws exception on invalid attribute value');
   });
 });

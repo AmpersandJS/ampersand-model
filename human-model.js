@@ -346,6 +346,14 @@
             newType = cast.type;
           }
 
+          //If we've defined a validator, run it
+          if (def.validator) {
+            var err = def.validator(newVal, newType);
+            if (err) {
+              throw new TypeError('Property \'' + attr + '\' failed validation with error: ' + err);
+            }
+          }
+
           // If we have a defined type and the new type doesn't match, throw error.
           // Unless it's not required and the value is undefined.
           if (def.type && def.type !== 'any' && def.type !== newType && (!def.required && !_.isUndefined(newVal))) {
@@ -702,6 +710,7 @@
           def.default = !_.isUndefined(desc[2]) ? desc[2] : desc.default;
           if (desc.setOnce) def.setOnce = true;
           if (def.required && _.isUndefined(def.default)) def.default = this._getDefaultForType(type);
+          def.validator = desc.validator;
         }
         if (isSession) def.session = true;
 
