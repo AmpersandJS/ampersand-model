@@ -346,9 +346,9 @@
             newType = cast.type;
           }
 
-          //If we've defined a validator, run it
-          if (def.validator) {
-            var err = def.validator(newVal, newType);
+          //If we've defined a test, run it
+          if (def.test) {
+            var err = def.test(newVal, newType);
             if (err) {
               throw new TypeError('Property \'' + attr + '\' failed validation with error: ' + err);
             }
@@ -719,7 +719,7 @@
           def.allowNull = desc.allowNull ? desc.allowNull : false;
           if (desc.setOnce) def.setOnce = true;
           if (def.required && _.isUndefined(def.default)) def.default = this._getDefaultForType(type);
-          def.validator = desc.validator;
+          def.test = desc.test;
         }
         if (isSession) def.session = true;
 

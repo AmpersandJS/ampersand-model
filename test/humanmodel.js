@@ -20,10 +20,11 @@ $(function() {
           today: ['date'],
           hash: ['object'],
           list: ['array'],
+          myBool: ['boolean', true, false],
           someNumber: {type: 'number', allowNull: true},
           good: {
               type: 'string',
-              validator: function (newVal) {
+              test: function (newVal) {
                   if (newVal !== 'good') {
                       return "Value not good";
                   }
@@ -534,15 +535,6 @@ $(function() {
     HumanModel.dataTypes = previousTypes;
   });
 
-  test('Attribute validation works', 2, function () {
-      var foo = new Foo({good: 'good'});
-      equal(foo.good, 'good');
-
-      throws(function () {
-          foo.good = 'bad';
-      }, TypeError, 'Throws exception on invalid attribute value');
-  });
-
   test('Should only allow nulls where specified', 2, function () {
     var foo = new Foo({
       firstName: 'bob',
@@ -554,4 +546,14 @@ $(function() {
         foo.firstName = null;
     }, TypeError, 'Throws exception when setting unallowed null');
   });
+
+  test('Attribute test function works', 2, function () {
+      var foo = new Foo({good: 'good'});
+      equal(foo.good, 'good');
+
+      throws(function () {
+          foo.good = 'bad';
+      }, TypeError, 'Throws exception on invalid attribute value');
+  });
+
 });
