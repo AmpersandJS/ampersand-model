@@ -367,9 +367,11 @@
           if ((def.type && def.type !== 'any' && def.type !== newType) && !_.isNull(newVal) && !_.isUndefined(newVal)) {
             throw new TypeError('Property \'' + attr + '\' must be of type ' + def.type + '. Tried to set ' + newVal);
           }
+          if (def.values && !_.contains(def.values, newVal)) {
+            throw new TypeError('Property \'' + attr + '\' must be one of values: ' + def.values.map(function (item) { return item.toString(); }).join(', '));
+          }
 
-          // if trying to set id after it's already been set
-          // reject that
+          // enforce `setOnce` for properties if set
           if (def.setOnce && currentVal !== undefined && !_.isEqual(currentVal, newVal)) {
             throw new TypeError('Property \'' + key + '\' can only be set once.');
           }
@@ -720,6 +722,7 @@
           if (desc.setOnce) def.setOnce = true;
           if (def.required && _.isUndefined(def.default)) def.default = this._getDefaultForType(type);
           def.test = desc.test;
+          def.values = desc.values;
         }
         if (isSession) def.session = true;
 

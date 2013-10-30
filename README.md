@@ -41,17 +41,29 @@ default: any (optional)
 setOnce: true, false (optional)
 test: function (optional)
 allowNull: true, false (optional)
+values: `['some', 'valid', 'values']`(optional) 
 
 Note that when defining with an array `type`, `required`, and `default`
 are the only property attributes you can set.
 
-If required is true, the attribute will always have a value even if it is not explicitly set or is cleared.  If a default is given, that will be used.  If no default is given a default for its data type will be used (e.g. '' for string, {} for object)
+If `required` is true, the attribute will always have a value even if it is not explicitly set or is cleared.  If a default is given, that will be used.  If no default is given a default for its data type will be used (e.g. '' for string, {} for object)
 
-If a default is given, the attribute will default to that value when the model is instantiated.
+If a `default` is given, the attribute will default to that value when the model is instantiated.
 
-If setOnce is true, the attribute will throw an error if anything tries to set its value more than once.
+If `setOnce` is true, the attribute will throw an error if anything tries to set its value more than once.
 
-If given, test should be a function that expects the new value (and optionally the new type) of the attribute.  It should return an error message on failure, and false on success
+If `values` is provided, you can only set that property to a value in the list. You can use this in combination with `type` to check both, or just use `values` and `default` by themselves. This is handy for `enum`-type stuff. For example:
+
+```js
+props: {
+    alignment: {
+        values: ['top', 'middle', 'bottom'],
+        default: 'middle'
+    }
+}
+```
+
+If given, `test` should be a function that expects the new value (and optionally the new type) of the attribute.  It should return an error message on failure, and false on success
 
 ```js
 props: {
@@ -87,12 +99,18 @@ var Person = HumanModel.define({
         lastLogin: ['date'],
         largePicUrl: ['string'],
         department: {
-            type: 'string',
+            type: 'number',
+            // you can optionally provide your own test function
             test: function (val) {
-                if (val !== 'sales' && val !== 'billing') {
+                if (val > 20) {
                     return "Invalid department";
                 }
             }
+        },
+        alignment: {
+            // you can also specify a list of valid values
+            values: ['top', 'middle', 'bottom'],
+            default: 'middle'
         }
     },
     // derived properties and their dependencies. If any dependency changes
@@ -217,6 +235,7 @@ Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions
 
 ## Changelog
 
+ - 2.3.0 - Added `values` to property definition
  - 2.2.0 - Added test parameter to property definitions
  - 2.1.0 - Added allowNull parameter to property definitions
  - 2.0.0 - Minor, but incompatible fix that remove `toServer` getter in lieu of adding `serialize` method that can be overridden.

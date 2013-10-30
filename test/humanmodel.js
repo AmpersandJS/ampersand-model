@@ -556,4 +556,45 @@ $(function() {
       }, TypeError, 'Throws exception on invalid attribute value');
   });
 
+  test('Values attribute basic functionality', 3, function () {
+      var Model = HumanModel.define({
+        props: {
+          state: {
+            values: ['CA', 'WA', 'NV']
+          }
+        }
+      });
+
+      var m = new Model();
+
+      throws(function () {
+        m.state = 'PR'
+      }, TypeError, 'Throws exception when setting something not in list');
+
+      equal(m.state, undefined, 'Should be undefined if no default');
+
+      m.state = 'CA';
+
+      equal(m.state, 'CA', 'State should be set');
+  });
+
+  test('Values attribute default works', 2, function () {
+      var Model = HumanModel.define({
+        props: {
+          state: {
+            values: ['CA', 'WA', 'NV'],
+            default: 'CA'
+          }
+        }
+      });
+
+      var m = new Model();
+
+      equal(m.state, 'CA', 'Should have applied the default');
+
+      throws(function () {
+        m.state = 'PR'
+      }, TypeError, 'Throws exception when setting something not in list');
+
+  });
 });
