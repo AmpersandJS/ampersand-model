@@ -346,7 +346,7 @@
             newType = cast.type;
           }
 
-          //If we've defined a test, run it
+          // If we've defined a test, run it
           if (def.test) {
             var err = def.test(newVal, newType);
             if (err) {
