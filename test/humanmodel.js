@@ -597,4 +597,39 @@ $(function() {
       }, TypeError, 'Throws exception when setting something not in list');
 
   });
+
+  test('toggle() works on boolean and values properties.', 7, function () {
+      var Model = HumanModel.define({
+        props: {
+          isAwesome: 'boolean',
+          someNumber: 'number',
+          state: {
+            values: ['CA', 'WA', 'NV'],
+            default: 'CA'
+          }
+        }
+      });
+
+      var m = new Model();
+
+      console.log('m.toggle', m.toggle);
+
+      throws(function () {
+        m.toggle('someNumber');
+      }, TypeError, 'Throws exception when toggling a non-togglable property.');
+
+      m.toggle('state');
+      equal(m.state, 'WA', 'Should go to next');
+      m.toggle('state');
+      equal(m.state, 'NV', 'Should go to next');
+      m.toggle('state');
+      equal(m.state, 'CA', 'Should go to next with loop');
+
+      m.toggle('isAwesome')
+      strictEqual(m.isAwesome, true, 'Should toggle even if undefined');
+      m.toggle('isAwesome')
+      strictEqual(m.isAwesome, false, 'Should toggle if true.');
+      m.toggle('isAwesome')
+      strictEqual(m.isAwesome, true, 'Should toggle if false.');
+  });
 });

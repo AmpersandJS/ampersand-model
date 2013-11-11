@@ -46,6 +46,12 @@
     return model;
   };
 
+  var arrayNext = function (array, currentItem) {
+    var len = array.length;
+    var newIndex = array.indexOf(currentItem) + 1;
+    if (newIndex > (len - 1)) newIndex = 0;
+    return array[newIndex];
+  };
 
   var createDerivedProperty = function (modelProto, name, definition) {
     var def = modelProto._derived[name] = {
@@ -438,6 +444,23 @@
 
       get: function (attr) {
         return this[attr];
+      },
+
+      // Toggle boolean properties or properties that have a `values`
+      // array in its definition.
+      toggle: function (property) {
+        var def = this._definition[property];
+        if (def.type === 'boolean') {
+          // if it's a bool, just flip it
+          this[property] = !this[property];
+        } else if (def && def.values) {
+          // If it's a property with an array of values
+          // skip to the next one looping back if at end.
+          this[property] = arrayNext(def.values, this[property]);
+        } else {
+          throw new TypeError('Can only toggle properties that are type `boolean` or have `values` array.');
+        }
+        return this;
       },
 
       // Get all of the attributes of the model at the time of the previous
