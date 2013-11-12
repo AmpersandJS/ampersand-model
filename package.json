@@ -1,22 +1,22 @@
 {
-    "name": "human-model",
-    "version": "2.5.0",
-    "author": "Henrik Joreteg <henrik@andyet.net>",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/henrikjoreteg/human-model.git"
-    },
-    "dependencies": {
-        "backbone": "1.0.0",
-        "underscore": "1.5.1"
-    },
-    "devDependencies": {
-        "precommit-hook": "0.3.4",
-        "uglify-js": "2.4.0"
-    },
-    "scripts": {
-        "build": "node build.js"
-    },
-    "main": "./human-model.js",
-    "browser": "./human-model.js"
+  "name": "human-model",
+  "version": "2.5.0",
+  "author": "Henrik Joreteg <henrik@andyet.net>",
+  "repository": {
+  "type": "git",
+    "url": "https://github.com/henrikjoreteg/human-model.git"
+  },
+  "dependencies": {
+    "backbone": "1.0.0",
+    "underscore": "1.5.1"
+  },
+  "devDependencies": {
+    "precommit-hook": "0.3.8",
+    "uglify-js": "2.4.0"
+  },
+  "scripts": {
+    "build": "node build.js"
+  },
+  "main": "./human-model.js",
+  "browser": "./human-model.js"
 }
