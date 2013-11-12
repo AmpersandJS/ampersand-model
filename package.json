@@ -1,20 +1,7 @@
 {
     "name": "human-model",
-    "version": "2.4.0",
+    "version": "2.5.0",
     "author": "Henrik Joreteg <henrik@andyet.net>",
-    "contributors": [
-        {
-            "name": "Beau Sorensen"
-        },
-        {
-          "name": "Lance Stout",
-          "email": "lance@andyet.net"
-        },
-        {
-          "name": "Philip Roberts",
-          "email": "phil@andyet.net"
-        } 
-    ],
     "repository": {
         "type": "git",
         "url": "https://github.com/henrikjoreteg/human-model.git"

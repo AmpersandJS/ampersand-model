@@ -4,6 +4,25 @@ Human Models are meant to work as a drop-in replacement for Backbone models. In 
 
 However, Human Models are far more restrictive and structured. They force you to specify properties (at at minimum their types) for things you want it to store.
 
+
+## Module sytems/loaders/managers
+
+Thanks to @svnlto, HumanModel uses UMD so it works as CommonJS (node + browserify), AMD, and as a standalone script tag.
+
+## Installing
+
+via npm:
+
+```
+npm install human-model
+```
+
+via bower: 
+
+```
+bower install human-model
+```
+
 ## Why do this?
 
 Backbone models have a lot of flexibility in that you don't have to define what you're wanting to store ahead of time. 
@@ -231,6 +250,7 @@ Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions
 - [@beausorensen](http://twitter.com/beausorensen)
 - [@LanceStout](https://twitter.com/lancestout)
 - [@philip_roberts](https://twitter.com/philip_roberts)
+- [@svenlito](https://twitter.com/svenlito)
 
 
 ## Changelog
