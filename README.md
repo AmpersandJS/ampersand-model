@@ -235,6 +235,7 @@ Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions
 
 ## Changelog
 
+ - 2.4.0 - Added `toggle` method for boolean properties and properties with `values`
  - 2.3.0 - Added `values` to property definition
  - 2.2.0 - Added test parameter to property definitions
  - 2.1.0 - Added allowNull parameter to property definitions
