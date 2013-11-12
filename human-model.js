@@ -2,27 +2,34 @@
 //   MIT Licensed
 //   For all details and documentation:
 //   https://github.com/HenrikJoreteg/human-model
-(function () {
+//
+
+(function (root, factory) {
+
+  'use strict';
+
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(['underscore', 'backbone'], function (_, Backbone) {
+      return (root.HumanModel = factory(_, Backbone));
+    });
+  } else if (typeof exports === 'object') {
+    // Node.
+    module.exports = factory(require('underscore'), require('backbone'));
+  } else {
+    // Browser globals
+    root.HumanModel = factory(root._, root.Backbone);
+  }
+
+}(this, function (_, Backbone) {
+
   'use strict';
 
   // Initial setup
   // -------------
 
-  // Establish the root object, `window` in the browser, or `global` on the server.
-  var root = this;
-  var toString = Object.prototype.toString;
   var slice = Array.prototype.slice;
 
-  // Require Underscore, if we're on the server, and it's not already present.
-  var _ = root._;
-  var define;
-  if (!_ && (typeof require !== 'undefined')) _ = require('underscore');
-
-  // Require Backbone, if we're on the server, and it's not already present.
-  var Backbone = root.Backbone;
-  if (!Backbone && (typeof require !== 'undefined')) Backbone = require('backbone');
-
-  // Backbone Collection compatibility fix:
   // In backbone, when you add an already instantiated model to a collection
   // the collection checks to see if what you're adding is already a model
   // the problem is, it does this witn an instanceof check. We're wanting to
@@ -187,7 +194,7 @@
     }
   };
 
-  define = function (spec) {
+  var define = function (spec) {
     spec || (spec = {});
     var key;
 
@@ -816,17 +823,12 @@
     throw new Error('A "url" property or function must be specified');
   };
 
-  var out = {
+  return {
     define: define,
     registry: registry,
     Registry: Registry,
     dataTypes: dataTypes
   };
 
-  if (typeof exports !== 'undefined') {
-    module.exports = out;
-  } else {
-    window.HumanModel = out;
-  }
+}));
 
-}).call(this);
