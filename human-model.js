@@ -75,13 +75,7 @@
     // defined a top-level getter for derived names
     Object.defineProperty(modelProto, name, {
       get: function () {
-        // is this a derived property we should cache?
-        if (this._derived[name].cache) {
-          // read through cache
-          return this._cache[name] || (this._cache[name] = this._derived[name].fn.apply(this));
-        } else {
-          return this._derived[name].fn.apply(this);
-        }
+        return this._getDerivedProperty(name);
       },
       set: function () {
         throw new TypeError('"' + name + '" is a derived property, it can\'t be set directly.');
@@ -222,7 +216,7 @@
       this._previousAttributes = {};
       this._events = {};
 
-      this.set(attrs, _.extend({silent: true}, options));
+      this.set(attrs, _.extend({silent: true, initial: true}, options));
       this._changed = {};
       this.initialize.apply(this, arguments);
       if (attrs[this.idAttribute]) this.registry.store(this);
@@ -304,9 +298,8 @@
       set: function (key, value, options) {
         var self = this;
         var extraProperties = this.extraProperties;
-        var changing, previous, changes,
-          newType, interpretedType, newVal, def,
-          attr, attrs, silent, unset, currentVal;
+        var changing, previous, changes, newType,
+          interpretedType, newVal, def, attr, attrs, silent, unset, currentVal, initial;
 
         // Handle both `"key", value` and `{key: value}` -style arguments.
         if (_.isObject(key) || key === null) {
@@ -324,6 +317,8 @@
         // Extract attributes and options.
         unset = options.unset;
         silent = options.silent;
+        initial = options.initial;
+
         changes = [];
         changing = this._changing;
         this._changing = true;
@@ -428,11 +423,16 @@
 
         _.each(_.uniq(triggers), function (key) {
           var derived = self._derived[key];
-          if (derived && derived.cache) {
-            self._previousAttributes[key] = self._cache[key];
-            delete self._cache[key];
+          if (derived && derived.cache && !initial) {
+            var oldDerived = self._cache[key];
+            var newDerived = self._getDerivedProperty(key, true);
+            if (!_.isEqual(oldDerived, newDerived)) {
+              self._previousAttributes[key] = oldDerived;
+              if (!silent) self.trigger('change:' + key, self, newDerived);
+            }
+          } else {
+            if (!silent) self.trigger('change:' + key, self, self[key]);
           }
-          if (!silent) self.trigger('change:' + key, self, self[key]);
         });
 
         // You might be wondering why there's a `while` loop here. Changes can
@@ -795,6 +795,20 @@
           }
         }
         return res;
+      },
+
+      _getDerivedProperty: function (name, flushCache) {
+        // is this a derived property that is cached
+        if (this._derived[name].cache) {
+          // read through cache
+          if (!flushCache && this._cache.hasOwnProperty(name)) {
+            return this._cache[name];
+          } else {
+            return this._cache[name] = this._derived[name].fn.apply(this);
+          }
+        } else {
+          return this._derived[name].fn.apply(this);
+        }
       }
     });
 

@@ -255,6 +255,8 @@ Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions
 
 ## Changelog
 
+ - 2.6.0 - Cached, derived properties only fire change events now if new derived value is different from cache, instead of blindly firing change events if dependent properties changed.
+ - 2.5.0 - UMD support by @swenlito
  - 2.4.0 - Added `toggle` method for boolean properties and properties with `values`
  - 2.3.0 - Added `values` to property definition
  - 2.2.0 - Added test parameter to property definitions

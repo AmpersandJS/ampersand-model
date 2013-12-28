@@ -359,6 +359,33 @@ $(function() {
     equal(notCachedRan, 3, 'incremented each time');
   });
 
+  test('cached, derived properties should only fire change event if they\'ve actually changed', 3, function () {
+    var changed = 0;
+    var Foo = HumanModel.define({
+      props: {
+        name: ['string', true],
+        other: 'string'
+      },
+      derived: {
+        greeting: {
+          deps: ['name', 'other'],
+          fn: function () {
+            return 'hi, ' + this.name;
+          }
+        }
+      }
+    });
+    var foo = new Foo({name: 'henrik'});
+    foo.on('change:greeting', function () {
+      changed++
+    });
+    equal(changed, 0);
+    foo.name = 'new';
+    equal(changed, 1);
+    foo.other = 'new';
+    equal(changed, 1);
+  });
+
   test('derived properties with derived dependencies', 5, function () {
     var ran = 0;
     var Foo = HumanModel.define({
@@ -611,8 +638,6 @@ $(function() {
       });
 
       var m = new Model();
-
-      console.log('m.toggle', m.toggle);
 
       throws(function () {
         m.toggle('someNumber');
