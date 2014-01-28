@@ -1,13 +1,14 @@
 # human-model
 
-Human Models are meant to work as a drop-in replacement for Backbone models. In fact, it's extensively tested against the unit tests from Backbone (open test/index.html to run). 
+<!-- starthide -->
+Part of the [Human Javascript toolkit](http://docs.humanjavascript.com) for building clientside applications.
+<!-- endhide -->
 
-However, Human Models are far more restrictive and structured. They force you to specify properties (at at minimum their types) for things you want it to store.
+HumanModel helps you create observable models for your apps. Most commonly in clientside frameworks, your models are what hold data fetched from your API. But really, it's all about having a way to separate concerns. Your models should be your authoritive "source of truth" when it comes to all state held in your application.
 
+Backbone provides observable models, but Human Model takes this a step further by forcing you to explicitly define what the model is going to store so that the model code can end up being self-documenting in that you can now simply look at the model code and see what they're expected to store.
 
-## Module sytems/loaders/managers
-
-Thanks to @svnlto, HumanModel uses UMD so it works as CommonJS (node + browserify), AMD, and as a standalone script tag.
+This is hugely important for enabling teams to work on the same app together. There's also a few extra goodies, like direct accessors (not having to use `.set()` and `.get()`), and intelligently evented dervied properties.
 
 ## Installing
 
@@ -23,6 +24,29 @@ via bower:
 bower install human-model
 ```
 
+## Module sytems/loaders/managers
+
+Thanks to @svnlto, HumanModel uses UMD so it works as CommonJS (node + browserify), AMD, and as a standalone script tag.
+
+## Types of state
+
+Take for instance a `selected` property on a model. That's likely something you would use to represent current UI state for the current browser session but not something you'd want to save back to the API when calling a model's .save() method. So there really are two types of state. It's challenging to make that type of distinction with Backbone.
+
+HumanModel supports three types of state that will get stored on a model: 
+
+ - **properties**: State that comes from (and will be sent back to) our API and represents the data persisted on the server.
+ - **session properties**: State that represents current browser session state. 
+ - **derived properties**: These are read-only psuedo properties that are usually derived from properties or session properties. These are generally created for convenince or as a means to let you cache a computed result (read more below).
+
+In human model you have to classify all your properties as either `prop` or a `session`. That includes declaring your `id` property. How HumanModel handles properties that you have not pre-defined is determined by its `extraProperties` setting. But, by default properties that are `.set()` on a model that you have not defined are simply ignored.
+
+In human model you have to classify all your properties as either prop or a session. That includes declaring your id property. How HumanModel handles properties that you have not pre-defined is determined by its extraProperties setting. But, by default properties that are `.set()` on a model that you have not defined are simply ignored.
+
+## Handling model relationships
+
+From our experience, derived properties work really well for handling relationships between models. Let's say you've got a model representing people and model representing a group of people. Often your API for fetching people would include something like a groupID as a property for each person you retrieve.
+
+
 ## Why do this?
 
 Backbone models have a lot of flexibility in that you don't have to define what you're wanting to store ahead of time. 
@@ -37,7 +61,6 @@ That means with Human Model you can set an attribute like this: `user.name = 'he
 
 Obviously, this restriction also means that this won't work in browsers that don't support that. You can check specific browser support here: http://kangax.github.io/es5-compat-table/
 
-
 ## Key Differences from Backbone
 
 Everything Backbone does with Collections should Just Work™ with HumanModel as long as you specify a HumanModel constructor as a collection's `model` property.
@@ -47,7 +70,7 @@ Everything Backbone does with Collections should Just Work™ with HumanModel as
 Besides that and the obvious differences, any behavior that doesn't match Backbone should be considered a bug.
 
 
-### Explicit model definitions
+## Explicit model definitions
 
 Schema definitions take an attribute called `props` to defined properties.
 
@@ -95,13 +118,13 @@ props: {
 }
 ```
 
-### A sample model with comments
+## A sample model with comments
 
 ```js
 var Person = HumanModel.define({
     // every human model should have a type
     type: 'member',
-    init: function () {
+    initialize: function () {
         // main initialization function
     },
     // props are for properties that exist on the server
@@ -161,7 +184,7 @@ var Person = HumanModel.define({
     // key. The child collection will also be given a reference
     // to its parent.
     collections: {
-        // messages: Messages
+        messages: Messages
     },
     otherMethods: function (cb) {
         // of course you can tack on whatever other methods you want
@@ -169,7 +192,7 @@ var Person = HumanModel.define({
 });
 ```
 
-### Going hardcore "strict" definition
+## Going hardcore "strict" definition
 
 [Strict mode](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions_and_function_scope/Strict_mode) in JS is pretty great and is fairly well supported in modern browsers.
 
@@ -203,7 +226,7 @@ model.something = 'something else'; // KABOOM!
 
 ```
 
-### Setting model attributes
+## Setting model attributes
 
 ```js
 // backbone:
@@ -212,11 +235,11 @@ user.set('firstName', 'billy bob');
 // human:
 user.firstName = 'billy bob';
 
-// p.s. you can still do it the other way in human (so you can still pass otions)
+// p.s. you can still do it the other way in human (so you can still pass options)
 user.set('firstName', 'billy bob', {silent: true})
 ```
 
-### Getting model attributes
+## Getting model attributes
 
 ```js
 // backbone:
@@ -226,14 +249,6 @@ user.get('firstName');
 user.firstName;
 ```
 
-## The Registry
-
-HumanModel also inits a global registery for storing all initted models. It's designed to be used for looking up models based on their type, id and optional namespace.
-
-It's purpose is finding/updating models when we get updates pushed to us from the server. This is very important for buildling realtime apps.
-
-TODO: needs more docs on the registry.
-
 ## Tests
 
 An extensive suite of tests can be run by opening `test/index.html` in a browser. In order to ensure compatibility with backbone to the extent possible I started with all the tests from Backbone 1.0.0 and modified them to use HumanModel.
@@ -242,6 +257,67 @@ An extensive suite of tests can be run by opening `test/index.html` in a browser
 
 - Since backbone does an `instanceof` check when adding initted models to a collection, HumanModel monkey patches the `_prepareModel` collection method to check against HumanModel instead.
 - Still needs better docs. Probably a full docs site.
+
+## The Registry
+
+HumanModel also inits a global registry for storing all initted models. It's designed to be used for looking up models based on their type, id and optional namespace.
+
+It's purpose is finding/updating models when we get updates pushed to us from the server. This is very important for buildling realtime apps.
+
+TODO: needs more docs on the registry.
+
+
+## Module: HumanModel
+
+The module exports the following functions and properties.
+
+### .define(modelDefinition)
+
+* Returns: {Constructor} A custom constructor for generating instances of the model you defined.
+* `modelDefinition` {Object} An object containing your entire model definition
+  * `props` {Object} An object of named property definitions
+  * `session` {Object} An object of named session property definitions
+  * `derived` {Object} An object of named derived property definitions
+    * `derivedDefinition` {Object | Function} This can either be a single function or an object describing the derived property and its dependencies.
+      * `deps` {Array} An array containing strings of other property names or derived property names. When these change, the derived property is re-calculated and only if different than previous cached value, a `change` event is fired for the derived property.
+      * `fn` {Function} A function that returns the value of the derived property. This function's `this` will be the model instance.
+      * `cache` {Boolean} Default: `true` Whether or not to cache the result.
+  * `initialize` {Function} Default: `function () {}` An overridable function that will be called as a last step in the instantiation process for your model. It get called with as the constructor got. 
+
+
+`define` is the main method you'll use to create model definitions. It returns a custom constructor that can be used to create instances of your custom model.
+
+As an example imagine two modules `app.js` and `UserModel.js`.
+
+The contents of `UserModel.js` defines a model:
+
+```js
+var HumanModel = require('human-model');
+
+// define a model
+var UserModel = HumanModel.define({
+    props: {
+        name: 'string'
+    }
+});
+
+var user = new User({name: 'henrik'});
+
+console.log(user.name); // logs out 'henrik'
+```
+
+### .registry
+
+An instance of the global model registry.
+
+### .Registry
+
+The Registry constructor is exported in case you want to define your own registry.
+
+### .dataTypes
+
+The dataTypes
+
 
 ## Authors
 
