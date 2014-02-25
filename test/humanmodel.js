@@ -657,4 +657,24 @@ $(function() {
       m.toggle('isAwesome')
       strictEqual(m.isAwesome, true, 'Should toggle if false.');
   });
+
+  test('property test function scope is correct.', 1, function () {
+    var m;
+    var temp;
+    var Model = HumanModel.define({
+      props: {
+        truth: {
+          type: 'boolean',
+          test: function () {
+            temp = this;
+            return false;
+          }
+        }
+      }
+    });
+
+    m = new Model();
+    m.toggle('truth');
+    equal(m, temp);
+  });
 });
