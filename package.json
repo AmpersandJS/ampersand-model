@@ -1,9 +1,9 @@
 {
   "name": "human-model",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "author": "Henrik Joreteg <henrik@andyet.net>",
   "repository": {
-  "type": "git",
+    "type": "git",
     "url": "https://github.com/henrikjoreteg/human-model.git"
   },
   "dependencies": {
