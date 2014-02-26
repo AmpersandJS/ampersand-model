@@ -40,7 +40,6 @@ HumanModel supports three types of state that will get stored on a model:
 
 In human model you have to classify all your properties as either `prop` or a `session`. That includes declaring your `id` property. How HumanModel handles properties that you have not pre-defined is determined by its `extraProperties` setting. But, by default properties that are `.set()` on a model that you have not defined are simply ignored.
 
-In human model you have to classify all your properties as either prop or a session. That includes declaring your id property. How HumanModel handles properties that you have not pre-defined is determined by its extraProperties setting. But, by default properties that are `.set()` on a model that you have not defined are simply ignored.
 
 ## Handling model relationships
 
