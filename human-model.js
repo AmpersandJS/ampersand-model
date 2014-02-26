@@ -356,7 +356,7 @@
 
           // If we've defined a test, run it
           if (def.test) {
-            var err = def.test(newVal, newType);
+            var err = def.test.call(this, newVal, newType);
             if (err) {
               throw new TypeError('Property \'' + attr + '\' failed validation with error: ' + err);
             }
@@ -751,9 +751,7 @@
           def.allowNull = desc.allowNull ? desc.allowNull : false;
           if (desc.setOnce) def.setOnce = true;
           if (def.required && _.isUndefined(def.default)) def.default = this._getDefaultForType(type);
-          if (desc.test) {
-            def.test = desc.test.bind(this);
-          }
+          def.test = desc.test;
           def.values = desc.values;
         }
         if (isSession) def.session = true;

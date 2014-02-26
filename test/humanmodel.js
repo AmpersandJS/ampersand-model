@@ -666,6 +666,7 @@ $(function() {
         truth: {
           type: 'boolean',
           test: function () {
+            console.log('TEST RUN', this);
             temp = this;
             return false;
           }
