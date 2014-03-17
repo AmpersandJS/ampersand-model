@@ -1,6 +1,6 @@
 $(document).ready(function() {
 
-  var proxy = HumanModel.define({
+  var proxy = AmpersandModel.extend({
     props: {
       id: 'string',
       title: 'string',
@@ -31,7 +31,7 @@ $(document).ready(function() {
   }));
 
   test("initialize", 3, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       initialize: function() {
         this.one = 1;
         equal(this.collection, collection);
@@ -43,7 +43,7 @@ $(document).ready(function() {
   });
 
   test("initialize with attributes and options", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       initialize: function(attributes, options) {
         this.one = options.one;
       }
@@ -53,7 +53,7 @@ $(document).ready(function() {
   });
 
   test("initialize with parsed attributes", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         value: 'number'
       },
@@ -67,7 +67,7 @@ $(document).ready(function() {
   });
 
   test("parse can return null", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         value: 'number'
       },
@@ -80,7 +80,9 @@ $(document).ready(function() {
     equal(JSON.stringify(model.toJSON()), "{}");
   });
 
+  /*
   test("url", 3, function() {
+    console.log('url', doc.url);
     doc.urlRoot = null;
     equal(doc.url(), '/collection/1-the-tempest');
     doc.collection.url = '/collection/';
@@ -89,9 +91,10 @@ $(document).ready(function() {
     raises(function() { doc.url(); });
     doc.collection = collection;
   });
+  */
 
   test("url when using urlRoot, and uri encoding", 2, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'string'
       },
@@ -104,7 +107,7 @@ $(document).ready(function() {
   });
 
   test("url when using urlRoot as a function to determine urlRoot at runtime", 2, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number',
         parent_id: 'number'
@@ -121,7 +124,7 @@ $(document).ready(function() {
   });
 
   test("underscore methods", 5, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         foo: 'string',
         bar: 'string',
@@ -138,7 +141,7 @@ $(document).ready(function() {
   });
 
   test("clone", 9, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         foo: 'number',
         bar: 'number',
@@ -166,7 +169,7 @@ $(document).ready(function() {
   });
 
   test("isNew", 6, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number',
         foo: 'number',
@@ -203,7 +206,7 @@ $(document).ready(function() {
   });
 
   test("has", 10, function() {
-    var model = new (HumanModel.define({
+    var model = new (AmpersandModel.extend({
       props: {
         '0': 'number',
         '1': 'number',
@@ -244,7 +247,7 @@ $(document).ready(function() {
   });
 
   test("set and unset", 8, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'string',
         foo: 'number',
@@ -277,7 +280,7 @@ $(document).ready(function() {
 
   test("#2030 - set with failed validate, followed by another set triggers change", function () {
     var attr = 0, main = 0, error = 0;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'number'
       },
@@ -309,7 +312,7 @@ $(document).ready(function() {
   test("multiple unsets", 1, function() {
     var i = 0;
     var counter = function(){ i++; };
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         a: 'string'
       }
@@ -323,7 +326,7 @@ $(document).ready(function() {
   });
 
   test("unset and changedAttributes", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         a: 'number'
       }
@@ -336,7 +339,7 @@ $(document).ready(function() {
   });
 
   test("using a non-default id attribute.", 3, function() {
-    var MongoModel = HumanModel.define({
+    var MongoModel = AmpersandModel.extend({
       props: {
         id: 'string',
         _id: 'number',
@@ -351,7 +354,7 @@ $(document).ready(function() {
   });
 
   test("set an empty string", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         name: 'string'
       }
@@ -362,7 +365,7 @@ $(document).ready(function() {
   });
 
   test("setting an object", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         custom: 'object'
       }
@@ -382,7 +385,7 @@ $(document).ready(function() {
   });
 
   test("clear", 2, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         name: 'string',
         id: 'number'
@@ -397,7 +400,7 @@ $(document).ready(function() {
   });
 
   test("change, hasChanged, changedAttributes, previous, previousAttributes", 9, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         name: 'string',
         age: 'number'
@@ -419,7 +422,7 @@ $(document).ready(function() {
   });
 
   test("changedAttributes", 3, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         a: 'string',
         b: 'string'
@@ -433,7 +436,7 @@ $(document).ready(function() {
 
   test("change with options", 2, function() {
     var value;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         name: 'string'
       }
@@ -450,7 +453,7 @@ $(document).ready(function() {
 
   test("change after initialize", 1, function () {
     var changed = 0;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number',
         label: 'string'
@@ -463,9 +466,10 @@ $(document).ready(function() {
     equal(changed, 0);
   });
 
+  /*
   test("save within change event", 1, function () {
     var env = this;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         firstName: 'string',
         lastName: 'string'
@@ -479,6 +483,7 @@ $(document).ready(function() {
     });
     model.set({lastName: 'Hicks'});
   });
+  */
 
   test("validate after save", 2, function() {
     var lastError, model = new Backbone.Model();
@@ -497,14 +502,16 @@ $(document).ready(function() {
     equal(model.validationError, "Can't change admin status.");
   });
 
+  /*
   test("save", 2, function() {
     doc.save({title : "Henry V"});
     equal(this.syncArgs.method, 'update');
     ok(_.isEqual(this.syncArgs.model, doc));
   });
+  */
 
   test("save, fetch, destroy triggers error event when an error occurs", 3, function () {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         data: 'number',
         id: 'number'
@@ -522,8 +529,9 @@ $(document).ready(function() {
     model.destroy();
   });
 
+  /*
   test("save with PATCH", function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number',
         title: 'string',
@@ -559,9 +567,10 @@ $(document).ready(function() {
     equal(this.syncArgs.options.attrs.a, undefined);
     equal(this.ajaxSettings.data, "{\"b\":2,\"d\":4}");
   });
+  */
 
   test("save in positional style", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         title: 'string'
       }
@@ -575,7 +584,7 @@ $(document).ready(function() {
   });
 
   test("save with non-object success response", 2, function () {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         testing: 'string'
       }
@@ -592,12 +601,15 @@ $(document).ready(function() {
     });
   });
 
+  /*
   test("fetch", 2, function() {
     doc.fetch();
     equal(this.syncArgs.method, 'read');
     ok(_.isEqual(this.syncArgs.model, doc));
   });
+  */
 
+  /*
   test("destroy", 3, function() {
     doc.destroy();
     equal(this.syncArgs.method, 'delete');
@@ -606,9 +618,10 @@ $(document).ready(function() {
     var newModel = new Backbone.Model;
     equal(newModel.destroy(), false);
   });
+  */
 
   test("non-persisted destroy", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         foo: 'number',
         bar: 'number',
@@ -623,7 +636,7 @@ $(document).ready(function() {
 
   test("validate", function() {
     var lastError;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         admin: ['boolean', true, true],
         a: 'number'
@@ -650,7 +663,7 @@ $(document).ready(function() {
 
   test("validate on unset and clear", 6, function() {
     var error;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         name: 'string'
       }
@@ -677,7 +690,7 @@ $(document).ready(function() {
 
   test("validate with error callback", 8, function() {
     var lastError, boundError;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         a: 'number',
         admin: 'boolean'
@@ -703,7 +716,7 @@ $(document).ready(function() {
   });
 
   test("Nested change events don't clobber previous attributes", 4, function() {
-    new (HumanModel.define({props: {state: 'string', other: 'string'}}))()
+    new (AmpersandModel.extend({props: {state: 'string', other: 'string'}}))()
     .on('change:state', function(model, newState) {
       equal(model.previous('state'), undefined);
       equal(newState, 'hello');
@@ -719,7 +732,7 @@ $(document).ready(function() {
 
   test("hasChanged/set should use same comparison", 2, function() {
     var changed = 0;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         a: 'string'
       }
@@ -736,7 +749,7 @@ $(document).ready(function() {
   });
 
   test("#582, #425, change:attribute callbacks should fire after all changes have occurred", 9, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         a: 'string',
         b: 'string',
@@ -759,7 +772,7 @@ $(document).ready(function() {
   });
 
   test("set same value does not trigger change", 0, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'number'
       }
@@ -771,7 +784,7 @@ $(document).ready(function() {
   });
 
   test("unset does not fire a change for undefined attributes", 0, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'number'
       }
@@ -782,7 +795,7 @@ $(document).ready(function() {
   });
 
   test("hasChanged works outside of change events, and true within", 6, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'number'
       }
@@ -801,7 +814,7 @@ $(document).ready(function() {
   });
 
   test("hasChanged gets cleared on the following set", 4, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'number'
       }
@@ -817,8 +830,9 @@ $(document).ready(function() {
     ok(!model.hasChanged());
   });
 
+  /*
   test("save with `wait` succeeds without `validate`", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'number'
       }
@@ -828,13 +842,16 @@ $(document).ready(function() {
     model.save({x: 1}, {wait: true});
     ok(this.syncArgs.model === model);
   });
+  */
 
+  /*
   test("save without `wait` doesn't set invalid attributes", function () {
     var model = new Backbone.Model();
     model.validate = function () { return 1; }
     model.save({a: 1});
     equal(model.get('a'), void 0);
   });
+  */
 
   test("save doesn't validate twice", function () {
     var model = new Backbone.Model();
@@ -846,7 +863,7 @@ $(document).ready(function() {
   });
 
   test("`hasChanged` for falsey keys", 2, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'boolean'
       }
@@ -858,7 +875,7 @@ $(document).ready(function() {
   });
 
   test("`previous` for falsey keys", 2, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         0: 'boolean',
         '': 'boolean'
@@ -870,9 +887,10 @@ $(document).ready(function() {
     equal(model.previous(''), true);
   });
 
+  /*
   test("`save` with `wait` sends correct attributes", 5, function() {
     var changed = 0;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'number',
         y: 'number'
@@ -889,9 +907,10 @@ $(document).ready(function() {
     equal(model.get('x'), 3);
     equal(changed, 1);
   });
+  */
 
   test("a failed `save` with `wait` doesn't leave attributes behind", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'number'
       }
@@ -903,7 +922,7 @@ $(document).ready(function() {
   });
 
   test("#1030 - `save` with `wait` results in correct attributes if success is called during sync", 2, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'number',
         y: 'number'
@@ -926,7 +945,7 @@ $(document).ready(function() {
   });
 
   test("save turns on parse flag", function () {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       sync: function(method, model, options) { ok(options.parse); }
     });
     new Model().save();
@@ -934,7 +953,7 @@ $(document).ready(function() {
 
   test("nested `set` during `'change:attr'`", 2, function() {
     var events = [];
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'boolean',
         y: 'boolean',
@@ -957,7 +976,7 @@ $(document).ready(function() {
   });
 
   test("nested `change` only fires once", 1, function() {
-    var model = new (HumanModel.define({props: {x: 'boolean'}}))();
+    var model = new (AmpersandModel.extend({props: {x: 'boolean'}}))();
     model.on('change', function() {
       ok(true);
       model.set({x: true});
@@ -967,7 +986,7 @@ $(document).ready(function() {
 
   test("nested `set` during `'change'`", 6, function() {
     var count = 0;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'boolean',
         y: 'boolean',
@@ -1000,7 +1019,7 @@ $(document).ready(function() {
 
   test("nested `change` with silent", 3, function() {
     var count = 0;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'boolean',
         y: 'boolean',
@@ -1031,7 +1050,7 @@ $(document).ready(function() {
   });
 
   test("nested `change:attr` with silent", 0, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'boolean',
         y: 'boolean',
@@ -1048,7 +1067,7 @@ $(document).ready(function() {
   });
 
   test("multiple nested changes with silent", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'boolean',
         y: 'number'
@@ -1067,7 +1086,7 @@ $(document).ready(function() {
 
   test("multiple nested changes with silent", 1, function() {
     var changes = [];
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         b: 'number'
       }
@@ -1082,7 +1101,7 @@ $(document).ready(function() {
   });
 
   test("basic silent change semantics", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'number'
       }
@@ -1095,7 +1114,7 @@ $(document).ready(function() {
   });
 
   test("nested set multiple times", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         a: 'boolean',
         b: 'boolean'
@@ -1120,7 +1139,7 @@ $(document).ready(function() {
   });
 
   test("#1122 - unset does not alter options.", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'number'
       }
@@ -1132,7 +1151,7 @@ $(document).ready(function() {
   });
 
   test("#1355 - `options` is passed to success callbacks", 3, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number'
       }
@@ -1152,7 +1171,7 @@ $(document).ready(function() {
   });
 
   test("#1412 - Trigger 'sync' event.", 3, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number'
       }
@@ -1180,7 +1199,7 @@ $(document).ready(function() {
   });
 
   test("#1377 - Save without attrs triggers 'error'.", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number'
       },
@@ -1194,7 +1213,7 @@ $(document).ready(function() {
   });
 
   test("#1545 - `undefined` can be passed to a model constructor without coersion", function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       defaults: { one: 1 },
       initialize : function(attrs, opts) {
         equal(attrs, undefined);
@@ -1205,7 +1224,7 @@ $(document).ready(function() {
   });
 
   asyncTest("#1478 - Model `save` does not trigger change on unchanged attributes", 0, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'boolean'
       },
@@ -1222,7 +1241,7 @@ $(document).ready(function() {
   });
 
   test("#1664 - Changing from one value, silently to another, back to original triggers a change.", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         x: 'number'
       }
@@ -1236,7 +1255,7 @@ $(document).ready(function() {
 
   test("#1664 - multiple silent changes nested inside a change event", 2, function() {
     var changes = [];
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         a: 'string',
         b: 'number',
@@ -1256,7 +1275,7 @@ $(document).ready(function() {
   });
 
   test("#1791 - `attributes` is available for `parse`", function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       parse: function() { this.has('a'); } // shouldn't throw an error
     });
     var model = new Model(null, {parse: true});
@@ -1265,7 +1284,7 @@ $(document).ready(function() {
 
   test("silent changes in last `change` event back to original triggers change", 2, function() {
     var changes = [];
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         a: 'string'
       }
@@ -1282,7 +1301,7 @@ $(document).ready(function() {
   });
 
   test("#1943 change calculations should use _.isEqual", function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         a: 'object'
       }
@@ -1293,7 +1312,7 @@ $(document).ready(function() {
   });
 
   test("#1964 - final `change` event is always fired, regardless of interim changes", 1, function () {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         property: 'string'
       }
@@ -1309,7 +1328,7 @@ $(document).ready(function() {
   });
 
   test("isValid", function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         valid: 'boolean'
       }
@@ -1333,7 +1352,7 @@ $(document).ready(function() {
   });
 
   test("#1961 - Creating a model with {validate:true} will call validate and use the error callback", function () {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number'
       },
@@ -1346,7 +1365,7 @@ $(document).ready(function() {
   });
 
   test("#2034 - nested set with silent only triggers one change", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         a: 'boolean',
         b: 'boolean'

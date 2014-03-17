@@ -1,23 +1,32 @@
 {
-  "name": "human-model",
+  "name": "ampersand-model",
   "version": "2.6.1",
   "author": "Henrik Joreteg <henrik@andyet.net>",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/henrikjoreteg/human-model.git"
+  "bugs": {
+    "url": "https://github.com/henrikjoreteg/ampersand-model/issues"
   },
   "dependencies": {
-    "backbone": "1.0.0",
-    "underscore": "1.5.1"
+    "ampersand-sync": "0.x.x",
+    "statey": "",
+    "underscore": "1.x.x"
   },
   "devDependencies": {
+    "ampersand-registry": "0.x.x",
     "precommit-hook": "0.3.8",
     "uglify-js": "2.4.0"
+  },
+  "homepage": "https://github.com/ampersandjs/ampersand-model",
+  "keywords": [
+    "model, ampersand, state"
+  ],
+  "license": "MIT",
+  "main": "./ampersand-model.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/henrikjoreteg/ampersand-model.git"
   },
   "scripts": {
     "build": "node build.js",
     "test": "npm run build && open ./test/index.html"
-  },
-  "main": "./human-model.js",
-  "browser": "./human-model.js"
+  }
 }

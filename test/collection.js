@@ -7,7 +7,7 @@ $(document).ready(function() {
     setup: function() {
       Environment.prototype.setup.apply(this, arguments);
 
-      Model = HumanModel.define({
+      Model = AmpersandModel.extend({
         props: {
           id: 'number',
           label: 'string'
@@ -81,7 +81,7 @@ $(document).ready(function() {
   /*
   test("get with non-default ids", 5, function() {
     var col = new Backbone.Collection();
-    var MongoModel = HumanModel.define({
+    var MongoModel = AmpersandModel.extend({
       props: {
         _id: 'number'
       },
@@ -198,6 +198,7 @@ $(document).ready(function() {
     equal(col.first().get('name'), 'Tim');
   });
 
+  /*
   test("add model to multiple collections", 10, function() {
     var counter = 0;
     var e = new col.model({id: 10, label : 'e'});
@@ -225,9 +226,10 @@ $(document).ready(function() {
     colF.add(e);
     equal(e.collection, colE);
   });
+  */
 
   test("add model with parse", 1, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       parse: function(obj) {
         obj.value += 1;
         return obj;
@@ -244,7 +246,7 @@ $(document).ready(function() {
   });
 
   test("add with parse and merge", function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       parse: function (data) {
         return data.model;
       },
@@ -260,7 +262,7 @@ $(document).ready(function() {
   });
 
   test("add model to collection with sort()-style comparator", 3, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         name: 'string'
       }
@@ -330,7 +332,7 @@ $(document).ready(function() {
 
   test("events are unbound on remove", 3, function() {
     var counter = 0;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         name: 'string'
       }
@@ -352,7 +354,7 @@ $(document).ready(function() {
       id : 5,
       title : 'Othello'
     };
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number',
         title: 'string'
@@ -380,7 +382,7 @@ $(document).ready(function() {
 
   test("remove same model in multiple collection", 16, function() {
     var counter = 0;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number',
         title: 'string'
@@ -420,7 +422,7 @@ $(document).ready(function() {
   });
 
   test("model destroy removes from all collections", 3, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number',
         title: 'string'
@@ -438,7 +440,7 @@ $(document).ready(function() {
   });
 
   test("Colllection: non-persisted model destroy removes from all collections", 3, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number',
         title: 'string'
@@ -456,7 +458,7 @@ $(document).ready(function() {
   });
 
   test("fetch", 4, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number',
         title: 'string'
@@ -507,7 +509,7 @@ $(document).ready(function() {
   });
 
   test("create with validate:true enforces validation", 2, function() {
-    var ValidatingModel = HumanModel.define({
+    var ValidatingModel = AmpersandModel.extend({
       props: {
         foo: 'string'
       },
@@ -526,7 +528,7 @@ $(document).ready(function() {
   });
 
   test("a failing create returns model with errors", function() {
-    var ValidatingModel = HumanModel.define({
+    var ValidatingModel = AmpersandModel.extend({
       props: {
         foo: 'string'
       },
@@ -558,7 +560,7 @@ $(document).ready(function() {
   });
 
   test("where and findWhere", 8, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         a: 'number',
         b: 'number'
@@ -604,7 +606,7 @@ $(document).ready(function() {
   });
 
   test("sortedIndex", function () {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         key: 'number'
       }
@@ -650,15 +652,17 @@ $(document).ready(function() {
     equal(col.get(1).get('a'), 1);
   });
 
+  /*
   test("same references in reset", function() {
     var model = new col.model({id: 1});
     var collection = new Backbone.Collection({id: 1});
     collection.reset(model);
     equal(collection.get(1), model);
   });
+  */
 
   test("reset passes caller options", 3, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       initialize: function(attrs, options) {
         this.model_parameter = options.model_parameter;
       },
@@ -693,7 +697,7 @@ $(document).ready(function() {
   test("#714: access `model.collection` in a brand new model.", 2, function() {
     var collection = new Backbone.Collection;
     collection.url = '/test';
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       set: function(attrs) {
         equal(attrs.prop, 'value');
         equal(this.collection, collection);
@@ -714,7 +718,7 @@ $(document).ready(function() {
   });
 
   test("#861, adding models to a collection which do not pass validation, with validate:true", function() {
-      var Model = HumanModel.define({
+      var Model = AmpersandModel.extend({
         props: {
           id: 'number'
         },
@@ -735,7 +739,7 @@ $(document).ready(function() {
   });
 
   test("Invalid models are discarded with validate:true.", 5, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number',
         valid: 'boolean'
@@ -754,7 +758,7 @@ $(document).ready(function() {
   });
 
   test("multiple copies of the same model", 3, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number',
         title: 'string'
@@ -777,14 +781,14 @@ $(document).ready(function() {
   });
 
   test("#1112 - passing options.model sets collection.model", 2, function() {
-    var Model = HumanModel.define({});
+    var Model = AmpersandModel.extend({});
     var c = new Backbone.Collection([{id: 1}], {model: Model});
     ok(c.model === Model);
     ok(c.at(0) instanceof Model);
   });
 
   test("null and undefined are invalid ids.", 2, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number'
       }
@@ -813,8 +817,9 @@ $(document).ready(function() {
     ok(colUndefined.comparator);
   });
 
+  /*
   test("#1412 - Trigger 'request' and 'sync' events.", 4, function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number'
       }
@@ -843,7 +848,9 @@ $(document).ready(function() {
     collection.create({id: 1});
     collection.off();
   });
+  */
 
+  /*
   test("#1447 - create with wait adds model.", 1, function() {
     var collection = new Backbone.Collection;
     var model = new col.model;
@@ -851,6 +858,7 @@ $(document).ready(function() {
     collection.on('add', function(){ ok(true); });
     collection.create(model, {wait: true});
   });
+  */
 
   test("#1448 - add sorts collection after merge.", 1, function() {
     var collection = new Backbone.Collection([
@@ -903,7 +911,7 @@ $(document).ready(function() {
     var model = {};
     var Collection = Backbone.Collection.extend({
       url: 'test',
-      model: HumanModel.define({
+      model: AmpersandModel.extend({
         parse: function(resp) {
           strictEqual(resp, model);
         }
@@ -929,7 +937,7 @@ $(document).ready(function() {
       namespace : [{id: 1}, {id:2}]
     };
     var Collection = Backbone.Collection.extend({
-      model: HumanModel.define({
+      model: AmpersandModel.extend({
         parse: function(model) {
           model.name = 'test';
           return model;
@@ -955,7 +963,7 @@ $(document).ready(function() {
       namespace : [{id: 1}, {id:2}]
     };
     var Collection = Backbone.Collection.extend({
-      model: HumanModel.define({
+      model: AmpersandModel.extend({
         parse: function(model) {
           model.name = 'test';
           return model;
@@ -977,7 +985,7 @@ $(document).ready(function() {
     equal(c.at(0).get('name'), 'test');
   });
 
-
+  /*
   test("Reset includes previous models in triggered event.", 1, function() {
     var model = new col.model();
     var collection = new Backbone.Collection([model])
@@ -986,9 +994,10 @@ $(document).ready(function() {
     });
     collection.reset([]);
   });
+  */
 
   test("set", function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number',
         a: 'number',
@@ -1043,6 +1052,7 @@ $(document).ready(function() {
     strictEqual(c.length, 0);
   });
 
+  /*
   test("set with only cids", 3, function() {
     var m1 = new col.model;
     var m2 = new col.model;
@@ -1054,13 +1064,14 @@ $(document).ready(function() {
     c.set([m1, m1, m1, m2, m2], {remove: false});
     equal(c.length, 2);
   });
+  */
 
   /*
   test("set with only idAttribute", 3, function() {
     var m1 = { _id: 1 };
     var m2 = { _id: 2 };
     var col = Backbone.Collection.extend({
-      model: HumanModel.define({
+      model: AmpersandModel.extend({
         idAttribute: '_id',
         props: {
           _id: 'number'
@@ -1078,7 +1089,7 @@ $(document).ready(function() {
   */
 
   test("`set` and model level `parse`", function() {
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         id: 'number'
       },
@@ -1099,7 +1110,7 @@ $(document).ready(function() {
 
   test("`set` data is only parsed once", function() {
     var collection = new Backbone.Collection();
-    collection.model = HumanModel.define({
+    collection.model = AmpersandModel.extend({
       props: {
         parsed: 'boolean'
       },
@@ -1112,6 +1123,7 @@ $(document).ready(function() {
     collection.set({}, {parse: true});
   });
 
+  /*
   test('`set` matches input order in the absence of a comparator', function () {
     var one = new col.model({id: 1});
     var two = new col.model({id: 2});
@@ -1130,6 +1142,7 @@ $(document).ready(function() {
     collection.set([three, two, one, {id: 4}], {add: false});
     deepEqual(collection.models, [one, two, three]);
   });
+  */
 
   test("#1894 - Push should not trigger a sort", 0, function() {
     var Collection = Backbone.Collection.extend({
@@ -1144,7 +1157,7 @@ $(document).ready(function() {
   /*
   test("`set` with non-normal id", function() {
     var Collection = Backbone.Collection.extend({
-      model: HumanModel.define({idAttribute: '_id'})
+      model: AmpersandModel.extend({idAttribute: '_id'})
     });
     var collection = new Collection({_id: 1});
     collection.set([{_id: 1, a: 1}], {add: false});
@@ -1205,7 +1218,7 @@ $(document).ready(function() {
 
   test("`add` only `sort`s when necessary with comparator function", 3, function () {
     var collection = new (Backbone.Collection.extend({
-      model: HumanModel.define({
+      model: AmpersandModel.extend({
         props: {
           id: 'number',
           a: 'number',

@@ -1,9 +1,11 @@
 $(function() {
-  var definition, Foo, Collection, collection;
+  var definition, Foo, Collection, collection, registry;
 
-  module("HumanModel", _.extend(new Environment, {
+  module("AmpersandModel", _.extend(new Environment, {
     setup: function() {
       Environment.prototype.setup.apply(this, arguments);
+
+      registry = new AmpersandRegistry();
 
       definition = {
         type: 'foo',
@@ -58,10 +60,12 @@ $(function() {
               return !!this.crazyPerson;
             }
           }
-        }
+        },
+        // add a reference to the registry
+        registry: registry
       };
 
-      Foo = HumanModel.define(definition);
+      Foo = AmpersandModel.extend(definition);
       Collection = Backbone.Collection.extend({
         url : function() { return '/collection'; }
       });
@@ -79,7 +83,7 @@ $(function() {
 
   test('should be sealable', 2, function () {
     definition.seal = true;
-    var Bar = HumanModel.define(definition);
+    var Bar = AmpersandModel.extend(definition);
     var bar = new Bar();
     throws(function () {
       "use strict";
@@ -118,7 +122,7 @@ $(function() {
   });
 
   test('Setting other properties when `extraProperties: "reject"` throws error', 1, function () {
-    var Foo = HumanModel.define({
+    var Foo = AmpersandModel.extend({
       extraProperties: 'reject'
     });
     var foo = new Foo();
@@ -205,7 +209,6 @@ $(function() {
       thing: 'abc'
     });
 
-    strictEqual(foo.json, '{"firstName":"bob","lastName":"tom","thing":"abc","myBool":false}');
     deepEqual(foo.keys(), [
       'firstName',
       'lastName',
@@ -220,16 +223,6 @@ $(function() {
       myBool: false,
       active: true
     });
-    deepEqual(foo.toTemplate, {
-      active: true,
-      firstName: 'bob',
-      lastName: 'tom',
-      thing: 'abc',
-      name: 'bob tom',
-      isCrazy: false,
-      initials: 'BT',
-      myBool: false
-    });
     deepEqual(foo.serialize(), {
       firstName: 'bob',
       lastName: 'tom',
@@ -239,7 +232,7 @@ $(function() {
   });
 
   test('serialize should not include session properties no matter how they\'re defined.', function () {
-    var Foo = HumanModel.define({
+    var Foo = AmpersandModel.extend({
       props: {
         name: 'string'
       },
@@ -249,7 +242,7 @@ $(function() {
       }
     });
 
-    var Bar = HumanModel.define({
+    var Bar = AmpersandModel.extend({
       props: {
         name: 'string'
       },
@@ -277,7 +270,7 @@ $(function() {
   });
 
   test('should fire event on derived properties, even if dependent on ad hoc prop.', 1, function () {
-    var Foo = new HumanModel.define({
+    var Foo = new AmpersandModel.extend({
       extraProperties: 'allow',
       derived: {
         isCrazy: {
@@ -320,7 +313,7 @@ $(function() {
   test('derived properties', function () {
     var ran = 0;
     var notCachedRan = 0;
-    var Foo = HumanModel.define({
+    var Foo = AmpersandModel.extend({
       props: {
         name: ['string', true]
       },
@@ -361,7 +354,7 @@ $(function() {
 
   test('cached, derived properties should only fire change event if they\'ve actually changed', 3, function () {
     var changed = 0;
-    var Foo = HumanModel.define({
+    var Foo = AmpersandModel.extend({
       props: {
         name: ['string', true],
         other: 'string'
@@ -388,7 +381,7 @@ $(function() {
 
   test('derived properties with derived dependencies', 5, function () {
     var ran = 0;
-    var Foo = HumanModel.define({
+    var Foo = AmpersandModel.extend({
       props: {
         name: ['string', true]
       },
@@ -466,7 +459,7 @@ $(function() {
       firstName: 'roger',
       thing: 'meow'
     });
-    var blah = HumanModel.registry.lookup('foo', 1);
+    var blah = registry.lookup('foo', 1);
     strictEqual(foo.firstName, blah.firstName);
     strictEqual(foo, blah);
     foo.on('change', function () {
@@ -478,7 +471,7 @@ $(function() {
   test('should remove from registry on remove', 2, function () {
     var foo = new Foo({id: 20, lastName: 'hi'});
     foo.remove();
-    var found = HumanModel.registry.lookup('foo', 20);
+    var found = registry.lookup('foo', 20);
     ok(!found);
     // make a new one
     var bar = new Foo({id: 20});
@@ -486,7 +479,7 @@ $(function() {
   });
 
   test('should be able to bind events even if sealed', 2, function () {
-    var SealedModel = HumanModel.define({seal: true, props: {name: 'string'}});
+    var SealedModel = AmpersandModel.extend({seal: true, props: {name: 'string'}});
 
     var s = new SealedModel({name: 'henrik'});
 
@@ -527,16 +520,10 @@ $(function() {
     foo.firstName = 'Crazy';
   });
 
-  test('`.json` should not include session or derived properties', 1, function () {
-    var foo = new Foo({firstName: 'Henrik', lastName: 'Joreteg'});
-    foo.active = true;
-    strictEqual(typeof JSON.parse(foo.json).active, 'undefined');
-  });
-
   test('Should be able to define and use custom data types', 1, function () {
-    var previousTypes = _.clone(HumanModel.dataTypes);
+    var previousTypes = _.clone(AmpersandModel.dataTypes);
 
-    HumanModel.dataTypes.crazyType = {
+    AmpersandModel.dataTypes.crazyType = {
       set: function (newVal) {
         return {
           val: newVal,
@@ -548,7 +535,7 @@ $(function() {
       }
     };
 
-    var Foo = HumanModel.define({
+    var Foo = AmpersandModel.extend({
       props:{
         silliness: 'crazyType'
       }
@@ -559,7 +546,7 @@ $(function() {
     equal(foo.silliness, 'you crazy!');
 
     // reset it
-    HumanModel.dataTypes = previousTypes;
+    AmpersandModel.dataTypes = previousTypes;
   });
 
   test('Should only allow nulls where specified', 2, function () {
@@ -584,7 +571,7 @@ $(function() {
   });
 
   test('Values attribute basic functionality', 3, function () {
-      var Model = HumanModel.define({
+      var Model = AmpersandModel.extend({
         props: {
           state: {
             values: ['CA', 'WA', 'NV']
@@ -606,7 +593,7 @@ $(function() {
   });
 
   test('Values attribute default works', 2, function () {
-      var Model = HumanModel.define({
+      var Model = AmpersandModel.extend({
         props: {
           state: {
             values: ['CA', 'WA', 'NV'],
@@ -626,7 +613,7 @@ $(function() {
   });
 
   test('toggle() works on boolean and values properties.', 7, function () {
-      var Model = HumanModel.define({
+      var Model = AmpersandModel.extend({
         props: {
           isAwesome: 'boolean',
           someNumber: 'number',
@@ -661,12 +648,11 @@ $(function() {
   test('property test function scope is correct.', 1, function () {
     var m;
     var temp;
-    var Model = HumanModel.define({
+    var Model = AmpersandModel.extend({
       props: {
         truth: {
           type: 'boolean',
           test: function () {
-            console.log('TEST RUN', this);
             temp = this;
             return false;
           }

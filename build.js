@@ -1,16 +1,14 @@
+var bundle = require('browserify')();
 var fs = require('fs');
 var uglify = require('uglify-js');
 var pack = require('./package.json');
 
-var bower = {
-  name: pack.name,
-  version: pack.version,
-  main: pack.main,
-  dependencies: pack.dependencies
-};
 
-// build our bower package
-fs.writeFileSync('bower.json', JSON.stringify(bower, null, 2));
-
-// build minified file
-fs.writeFileSync('human-model.min.js', uglify.minify('human-model.js').code);
+bundle.add('./ampersand-model');
+bundle.bundle({standalone: 'AmpersandModel'}, function (err, source) {
+  if (err) console.error(err);
+  fs.writeFileSync('ampersand-model.bundle.js', source, 'utf-8');
+  fs.writeFile('ampersand-model.min.js', uglify.minify(source, {fromString: true}).code, function (err) {
+    if (err) throw err;
+  });
+});
