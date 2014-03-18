@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "ampersand-sync": "0.x.x",
-    "statey": "",
+    "ampersand-state": "0.x.x",
     "underscore": "1.x.x"
   },
   "devDependencies": {

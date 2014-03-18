@@ -9,15 +9,8 @@
     "undef": true,
     "browser": true,
     "node": true,
-    "indent": 2,
+    "indent": 4,
     "strict": false,
     "eqnull": true,
-    "predef": [
-        "$",
-        "require",
-        "define",
-        "process",
-        "exports",
-        "module"
-    ]
+    "predef": []
 }
