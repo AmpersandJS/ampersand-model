@@ -1,44 +1,41 @@
-# human-model
+# ampersand-model
 
-<!-- starthide -->
-Part of the [Human Javascript toolkit](http://docs.humanjavascript.com) for building clientside applications.
-<!-- endhide -->
+ampersand-model helps you create observable models for your apps. Most commonly in clientside frameworks, your models are what hold data fetched from your API. But really, it's all about having a way to separate concerns. Your models should be your authoritive "source of truth" when it comes to all state held in your application.
 
-HumanModel helps you create observable models for your apps. Most commonly in clientside frameworks, your models are what hold data fetched from your API. But really, it's all about having a way to separate concerns. Your models should be your authoritive "source of truth" when it comes to all state held in your application.
-
-Backbone provides observable models, but Human Model takes this a step further by forcing you to explicitly define what the model is going to store so that the model code can end up being self-documenting in that you can now simply look at the model code and see what they're expected to store.
+ampersand-model takes what backbone models do a step further by forcing you to explicitly define what the model is going to store so that the model code can end up being self-documenting in that you can now simply look at the model code and see what they're expected to store.
 
 This is hugely important for enabling teams to work on the same app together. There's also a few extra goodies, like direct accessors (not having to use `.set()` and `.get()`), and intelligently evented dervied properties.
+
+<!-- starthide -->
+Part of the [Ampersand.js toolkit](http://ampersandjs.com) for building clientside applications.
+<!-- endhide -->
 
 ## Installing
 
 via npm:
 
 ```
-npm install human-model
+npm install ampersand-model
 ```
 
 via bower: 
 
 ```
-bower install human-model
+bower install ampersand-model
 ```
 
-## Module sytems/loaders/managers
-
-Thanks to @svnlto, HumanModel uses UMD so it works as CommonJS (node + browserify), AMD, and as a standalone script tag.
 
 ## Types of state
 
 Take for instance a `selected` property on a model. That's likely something you would use to represent current UI state for the current browser session but not something you'd want to save back to the API when calling a model's .save() method. So there really are two types of state. It's challenging to make that type of distinction with Backbone.
 
-HumanModel supports three types of state that will get stored on a model: 
+ampersand-model supports three types of state that will get stored on a model: 
 
  - **properties**: State that comes from (and will be sent back to) our API and represents the data persisted on the server.
  - **session properties**: State that represents current browser session state. 
  - **derived properties**: These are read-only psuedo properties that are usually derived from properties or session properties. These are generally created for convenince or as a means to let you cache a computed result (read more below).
 
-In human model you have to classify all your properties as either `prop` or a `session`. That includes declaring your `id` property. How HumanModel handles properties that you have not pre-defined is determined by its `extraProperties` setting. But, by default properties that are `.set()` on a model that you have not defined are simply ignored.
+In ampersand model you have to classify all your properties as either `prop` or a `session`. That includes declaring your `id` property. How ampersand-model handles properties that you have not pre-defined is determined by its `extraProperties` setting. But, by default properties that are `.set()` on a model that you have not defined are simply ignored.
 
 
 ## Handling model relationships
@@ -52,21 +49,13 @@ Backbone models have a lot of flexibility in that you don't have to define what 
 
 The only challenge with that is that for more complex applications is actually becomes quite difficult to remember what properties are available to you.
 
-Using human models means they're much more self-documenting and help catch bugs. Someone new to the project can read the models and have a pretty good idea of how the app is put together.
+Using ampersand models means they're much more self-documenting and help catch bugs. Someone new to the project can read the models and have a pretty good idea of how the app is put together.
 
 It also uses's ES5's fancy `Object.defineProperty` to treat model attributes as if they were properties.
 
-That means with Human Model you can set an attribute like this: `user.name = 'henrik'` and still get a `change:name` event fired. 
+That means with Ampersand Model you can set an attribute like this: `user.name = 'henrik'` and still get a `change:name` event fired. 
 
 Obviously, this restriction also means that this won't work in browsers that don't support that. You can check specific browser support here: http://kangax.github.io/es5-compat-table/
-
-## Key Differences from Backbone
-
-Everything Backbone does with Collections should Just Work™ with HumanModel as long as you specify a HumanModel constructor as a collection's `model` property.
-
-**important**: One key point to understand is that unlike backbone. You're actually passing an object definition that describes the Model, not just methods to attach to its prototype. For example, you'll notice we call `HumanModel.define()` instead of `Backbone.Model.extend()`. This is to make the distinction clear.
-
-Besides that and the obvious differences, any behavior that doesn't match Backbone should be considered a bug.
 
 
 ## Explicit model definitions
@@ -120,8 +109,8 @@ props: {
 ## A sample model with comments
 
 ```js
-var Person = HumanModel.define({
-    // every human model should have a type
+var Person = AmpersandModel.define({
+    // every ampersand model should have a type
     type: 'member',
     initialize: function () {
         // main initialization function
@@ -201,7 +190,7 @@ If you want to be *really* hardcore about not letting you set properties that ar
 // enable strict mode
 "use strict";
 
-var MySuperStrictModel = HumanModel.define({
+var MySuperStrictModel = AmpersandModel.define({
     // set this to true
     seal: true,
     // also throw errors for properties not defined
@@ -231,10 +220,10 @@ model.something = 'something else'; // KABOOM!
 // backbone:
 user.set('firstName', 'billy bob');
 
-// human:
+// ampersand:
 user.firstName = 'billy bob';
 
-// p.s. you can still do it the other way in human (so you can still pass options)
+// p.s. you can still do it the other way in ampersand (so you can still pass options)
 user.set('firstName', 'billy bob', {silent: true})
 ```
 
@@ -244,31 +233,23 @@ user.set('firstName', 'billy bob', {silent: true})
 // backbone:
 user.get('firstName');
 
-// human
+// ampersand
 user.firstName;
 ```
 
 ## Tests
 
-An extensive suite of tests can be run by opening `test/index.html` in a browser. In order to ensure compatibility with backbone to the extent possible I started with all the tests from Backbone 1.0.0 and modified them to use HumanModel.
+An extensive suite of tests can be run by opening `test/index.html` in a browser. In order to ensure compatibility with backbone to the extent possible we started with all the tests from Backbone 1.0.0 and modified them to use ampersand-model.
 
 ## Caveats 
 
-- Since backbone does an `instanceof` check when adding initted models to a collection, HumanModel monkey patches the `_prepareModel` collection method to check against HumanModel instead.
+- Since backbone does an `instanceof` check when adding initted models to a collection, ampersand-model monkey patches the `_prepareModel` collection method to check against ampersand-model instead.
 - Still needs better docs. Probably a full docs site.
 
-## The Registry
 
-HumanModel also inits a global registry for storing all initted models. It's designed to be used for looking up models based on their type, id and optional namespace.
+## Module: ampersand-model
 
-It's purpose is finding/updating models when we get updates pushed to us from the server. This is very important for buildling realtime apps.
-
-TODO: needs more docs on the registry.
-
-
-## Module: HumanModel
-
-The module exports the following functions and properties.
+The module exports just one item, the ampersand-model constructor. It's has a method called `extend` that works as follows:
 
 ### .define(modelDefinition)
 
@@ -291,10 +272,10 @@ As an example imagine two modules `app.js` and `UserModel.js`.
 The contents of `UserModel.js` defines a model:
 
 ```js
-var HumanModel = require('human-model');
+var AmpersandModel = require('ampersand-model');
 
 // define a model
-var UserModel = HumanModel.define({
+var UserModel = AmpersandModel.extend({
     props: {
         name: 'string'
     }
@@ -305,18 +286,12 @@ var user = new User({name: 'henrik'});
 console.log(user.name); // logs out 'henrik'
 ```
 
-### .registry
-
-An instance of the global model registry.
-
-### .Registry
-
-The Registry constructor is exported in case you want to define your own registry.
-
 ### .dataTypes
 
 The dataTypes
 
+
+<!-- starthide -->
 
 ## Authors
 
@@ -345,3 +320,5 @@ Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions
 ## License
 
 MIT
+
+<!-- endhide -->
