@@ -109,7 +109,7 @@ props: {
 ## A sample model with comments
 
 ```js
-var Person = AmpersandModel.define({
+var Person = AmpersandModel.extend({
     // every ampersand model should have a type
     type: 'member',
     initialize: function () {
@@ -190,7 +190,7 @@ If you want to be *really* hardcore about not letting you set properties that ar
 // enable strict mode
 "use strict";
 
-var MySuperStrictModel = AmpersandModel.define({
+var MySuperStrictModel = AmpersandModel.extend({
     // set this to true
     seal: true,
     // also throw errors for properties not defined
@@ -251,7 +251,7 @@ An extensive suite of tests can be run by opening `test/index.html` in a browser
 
 The module exports just one item, the ampersand-model constructor. It's has a method called `extend` that works as follows:
 
-### .define(modelDefinition)
+### .extend(modelDefinition)
 
 * Returns: {Constructor} A custom constructor for generating instances of the model you defined.
 * `modelDefinition` {Object} An object containing your entire model definition
@@ -265,7 +265,7 @@ The module exports just one item, the ampersand-model constructor. It's has a me
   * `initialize` {Function} Default: `function () {}` An overridable function that will be called as a last step in the instantiation process for your model. It get called with as the constructor got. 
 
 
-`define` is the main method you'll use to create model definitions. It returns a custom constructor that can be used to create instances of your custom model.
+`extend` is the main method you'll use to create model definitions. It returns a custom constructor that can be used to create instances of your custom model.
 
 As an example imagine two modules `app.js` and `UserModel.js`.
 

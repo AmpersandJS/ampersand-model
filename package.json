@@ -13,7 +13,8 @@
   "devDependencies": {
     "ampersand-registry": "0.x.x",
     "precommit-hook": "0.3.8",
-    "uglify-js": "2.4.0"
+    "uglify-js": "2.4.0",
+    "browserify": "^3.33.0"
   },
   "homepage": "https://github.com/ampersandjs/ampersand-model",
   "keywords": [
@@ -27,6 +28,7 @@
   },
   "scripts": {
     "build": "node build.js",
-    "test": "npm run build && open ./test/index.html"
+    "test": "npm run build && open ./test/index.html",
+    "test-speed": "npm run build && open ./test/speed.html"
   }
 }

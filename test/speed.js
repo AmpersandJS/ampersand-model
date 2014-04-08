@@ -1,7 +1,7 @@
-module("HumanModel.Speed");
+module("AmpersandModel.Speed");
 
 test("initialize 100000 bare models", function () {
-  var Model = HumanModel.define();
+  var Model = AmpersandModel.extend({});
   var Collection = Backbone.Collection.extend({
     model: Model
   });
@@ -20,7 +20,7 @@ test("initialize 100000 bare models", function () {
 });
 
 test("initialize 100000 models with basic props", function () {
-  var Model = HumanModel.define({
+  var Model = AmpersandModel.extend({
     props: {
       firstName: 'string',
       lastName: 'string'
