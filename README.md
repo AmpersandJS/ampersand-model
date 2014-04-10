@@ -24,6 +24,10 @@ via bower:
 bower install ampersand-model
 ```
 
+## Browser compatibility
+
+[![testling badge](https://ci.testling.com/ampersandjs/ampersand-model.png)](https://ci.testling.com/ampersandjs/ampersand-model)
+
 
 ## Types of state
 
@@ -237,14 +241,13 @@ user.get('firstName');
 user.firstName;
 ```
 
-## Tests
+## Running the tests
 
-An extensive suite of tests can be run by opening `test/index.html` in a browser. In order to ensure compatibility with backbone to the extent possible we started with all the tests from Backbone 1.0.0 and modified them to use ampersand-model.
+```
+npm test
+```
 
-## Caveats 
-
-- Since backbone does an `instanceof` check when adding initted models to a collection, ampersand-model monkey patches the `_prepareModel` collection method to check against ampersand-model instead.
-- Still needs better docs. Probably a full docs site.
+*note*: Much of the functionality of ampersand-model is actually inherited from [ampersand-state](https://github.com/ampersandjs/ampersand-state) and is tested seperately there. In order to ensure compatibility with backbone to the extent possible we started with all the tests from Backbone and modified them to use ampersand-model. But over time they've been spread out and converted to be run with [tape](https://github.com/substack/tape) so we can automatically test against many browser versions with testling.
 
 
 ## Module: ampersand-model

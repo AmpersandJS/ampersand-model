@@ -1,6 +1,2 @@
 node_modules
-ampersand-model.min.js
-ampersand-model.bundle.js
-test.js
-idealUse.js
-test/*
+test/model.js

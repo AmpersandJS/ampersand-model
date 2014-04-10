@@ -104,15 +104,10 @@ module.exports = State.extend({
         return sync.apply(this, arguments);
     },
 
-    // serialize does nothing by default
-    serialize: function () {
-        return this._getAttributes(false, true);
-    },
-
     // Remove model from the registry and unbind events
     remove: function () {
         if (this.getId() && this.registry) {
-            _.result(this, 'registry').remove(this.type, this.getId(), this._namespace);
+            _.result(this, 'registry').remove(this.getType(), this.getId(), this.getNamespace());
         }
         this.trigger('remove', this);
         this.off();

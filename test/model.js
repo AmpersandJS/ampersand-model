@@ -1,3 +1,14 @@
+/*
+These are still here (despite being broken) because we may want to adapt them to work with tape.
+
+Some of them are testing things that really belong in ampersand-state's
+test suite. Others are relevant for this repo.
+
+They used to all pass when we ran this with QUnit, but things have obviously
+been split out and re-shuffled a bit since then.
+*/
+
+
 $(document).ready(function() {
 
   var proxy = AmpersandModel.extend({
@@ -30,55 +41,6 @@ $(document).ready(function() {
 
   }));
 
-  test("initialize", 3, function() {
-    var Model = AmpersandModel.extend({
-      initialize: function() {
-        this.one = 1;
-        equal(this.collection, collection);
-      }
-    });
-    var model = new Model({}, {collection: collection});
-    equal(model.one, 1);
-    equal(model.collection, collection);
-  });
-
-  test("initialize with attributes and options", 1, function() {
-    var Model = AmpersandModel.extend({
-      initialize: function(attributes, options) {
-        this.one = options.one;
-      }
-    });
-    var model = new Model({}, {one: 1});
-    equal(model.one, 1);
-  });
-
-  test("initialize with parsed attributes", 1, function() {
-    var Model = AmpersandModel.extend({
-      props: {
-        value: 'number'
-      },
-      parse: function(attrs) {
-        attrs.value += 1;
-        return attrs;
-      }
-    });
-    var model = new Model({value: 1}, {parse: true});
-    equal(model.get('value'), 2);
-  });
-
-  test("parse can return null", 1, function() {
-    var Model = AmpersandModel.extend({
-      props: {
-        value: 'number'
-      },
-      parse: function(attrs) {
-        attrs.value += 1;
-        return null;
-      }
-    });
-    var model = new Model({value: 1}, {parse: true});
-    equal(JSON.stringify(model.toJSON()), "{}");
-  });
 
   /*
   test("url", 3, function() {
@@ -123,51 +85,6 @@ $(document).ready(function() {
     equal(model.url(), '/nested/1/collection/2');
   });
 
-  test("underscore methods", 5, function() {
-    var Model = AmpersandModel.extend({
-      props: {
-        foo: 'string',
-        bar: 'string',
-        baz: 'string'
-      }
-    });
-    var model = new Model({ 'foo': 'a', 'bar': 'b', 'baz': 'c' });
-    var model2 = model.clone();
-    deepEqual(model.keys(), ['foo', 'bar', 'baz']);
-    deepEqual(model.values(), ['a', 'b', 'c']);
-    deepEqual(model.invert(), { 'a': 'foo', 'b': 'bar', 'c': 'baz' });
-    deepEqual(model.pick('foo', 'baz'), {'foo': 'a', 'baz': 'c'});
-    deepEqual(model.omit('foo', 'bar'), {'baz': 'c'});
-  });
-
-  test("clone", 9, function() {
-    var Model = AmpersandModel.extend({
-      props: {
-        foo: 'number',
-        bar: 'number',
-        baz: 'number',
-        p: 'number'
-      }
-    });
-    var a = new Model({ 'foo': 1, 'bar': 2, 'baz': 3});
-    var b = a.clone();
-    equal(a.get('foo'), 1);
-    equal(a.get('bar'), 2);
-    equal(a.get('baz'), 3);
-    equal(b.get('foo'), a.get('foo'), "Foo should be the same on the clone.");
-    equal(b.get('bar'), a.get('bar'), "Bar should be the same on the clone.");
-    equal(b.get('baz'), a.get('baz'), "Baz should be the same on the clone.");
-    a.set({foo : 100});
-    equal(a.get('foo'), 100);
-    equal(b.get('foo'), 1, "Changing a parent attribute does not change the clone.");
-
-    var foo = new Model({p: 1});
-    var bar = new Model({p: 2});
-    bar.set(foo.clone().attributes, {unset: true});
-    equal(foo.get('p'), 1);
-    //equal(bar.get('p'), undefined);
-  });
-
   test("isNew", 6, function() {
     var Model = AmpersandModel.extend({
       props: {
@@ -186,11 +103,6 @@ $(document).ready(function() {
     ok( new Model({          }).isNew(), "is true when there is no id");
     ok(!new Model({ 'id': 2  }).isNew(), "is false for a positive integer");
     ok(!new Model({ 'id': -5 }).isNew(), "is false for a negative integer");
-  });
-
-  test("get", 2, function() {
-    equal(doc.get('title'), 'The Tempest');
-    equal(doc.get('author'), 'Bill Shakespeare');
   });
 
   test("escape", 4, function() {
@@ -336,21 +248,6 @@ $(document).ready(function() {
       ok('a' in model.changedAttributes(), 'changedAttributes should contain unset properties');
     });
     model.unset('a');
-  });
-
-  test("using a non-default id attribute.", 3, function() {
-    var MongoModel = AmpersandModel.extend({
-      props: {
-        id: 'string',
-        _id: 'number',
-        title: 'string'
-      },
-      idAttribute : '_id'
-    });
-    var model = new MongoModel({id: 'eye-dee', _id: 25, title: 'Model'});
-    equal(model.get('id'), 'eye-dee');
-    equal(model.getId(), 25);
-    equal(model.isNew(), false);
   });
 
   test("set an empty string", 1, function() {
