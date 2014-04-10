@@ -66,7 +66,6 @@ test('should fire a remove event', function (t) {
 });
 
 test('should remove all event bindings after remove', function (t) {
-    t.plan(1);
     var Foo = getModel();
     var foo = new Foo({thing: 'meow'});
     foo.on('change', function () {
@@ -74,10 +73,7 @@ test('should remove all event bindings after remove', function (t) {
     });
     foo.remove();
     foo.thing = 'cow';
-    setTimeout(function () {
-        t.pass();
-        t.end();
-    }, 0);
+    t.end();
 });
 
 test('should remove from registry on remove', function (t) {
