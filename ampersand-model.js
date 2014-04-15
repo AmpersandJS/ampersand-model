@@ -3,7 +3,48 @@ var _ = require('underscore');
 var sync = require('ampersand-sync');
 
 
-module.exports = State.extend({
+function Model(attrs, options) {
+    options || (options = {});
+    this.cid = _.uniqueId('model');
+    // grab collection/registry if passed in
+    _.extend(this, _.pick(options, attributeOptions));
+    BaseState.call(this, attrs, options);
+    if (attrs && attrs[this.idAttribute] && this.registry) _.result(this, 'registry').store(this);
+}
+
+var attributeOptions = ['collection', 'registry'];
+var BaseState = State.extend({});
+
+Model.prototype = Object.create(BaseState.prototype, {
+    constructor: Model
+});
+
+// Set up all inheritable properties and methods.
+_.extend(Model.prototype, {
+    idAttribute: 'id',
+
+    namespaceAttribute: 'namespace',
+
+    typeAttribute: 'modelType',
+
+    // Get ID of model per configuration.
+    // Should *always* be how ID is determined by other code.
+    getId: function () {
+        return this[this.idAttribute];
+    },
+
+    // Get namespace of model per configuration.
+    // Should *always* be how namespace is determined by other code.
+    getNamespace: function () {
+        return this[this.namespaceAttribute];
+    },
+
+    // Get type of model per configuration.
+    // Should *always* be how type is determined by other code.
+    getType: function () {
+        return this[this.typeAttribute];
+    },
+
     save: function (key, val, options) {
         var attrs, method, xhr, attributes = this.attributes;
 
@@ -175,3 +216,6 @@ var wrapError = function (model, options) {
         model.trigger('error', model, resp, options);
     };
 };
+
+Model.extend = BaseState.extend;
+module.exports = Model;

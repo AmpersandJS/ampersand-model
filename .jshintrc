@@ -4,13 +4,16 @@
     "boss": true,
     "loopfunc": true,
     "curly": false,
-    "evil": true,
     "white": true,
     "undef": true,
     "browser": true,
-    "node": true,
+    "debug": false,
+    "node": false,
     "indent": 4,
     "strict": false,
     "eqnull": true,
-    "predef": []
+    "predef": [
+        "require",
+        "module"
+    ]
 }

@@ -87,3 +87,51 @@ test('should remove from registry on remove', function (t) {
     t.strictEqual(bar.lastName, '');
     t.end();
 });
+
+test('custom id and namespace attributes', function (t) {
+    var NewPerson = Model.extend({
+        props: {
+            name: 'string',
+            _id: 'number',
+            ns: 'string'
+        },
+        idAttribute: '_id',
+        namespaceAttribute: 'ns'
+    });
+    var person = new NewPerson({name: 'henrik', ns: 'group1', _id: 47});
+    t.equal(person.getId(), 47);
+    t.equal(person.getNamespace(), 'group1');
+    t.end();
+});
+
+test('customizable `type` attribute', function (t) {
+    var FirstModel = Model.extend({
+        type: 'hello',
+        typeAttribute: 'type'
+    });
+    var SecondModel = Model.extend({
+        modelType: 'second'
+    });
+    var first = new FirstModel();
+    var second = new SecondModel();
+    t.equal(first.getType(), 'hello');
+    t.equal(second.getType(), 'second');
+    t.end();
+});
+
+test('should store models in the registry', function (t) {
+    var Foo = getModel();
+    var foo = new Foo({
+        id: 1,
+        firstName: 'roger',
+        thing: 'meow'
+    });
+    var blah = foo.registry.lookup('foo', 1);
+    t.strictEqual(foo.firstName, blah.firstName);
+    t.strictEqual(foo, blah);
+    foo.on('change', function () {
+        t.ok(true);
+    });
+    blah.firstName = 'blah';
+    t.end();
+});

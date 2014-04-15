@@ -6,7 +6,7 @@
     "url": "https://github.com/henrikjoreteg/ampersand-model/issues"
   },
   "dependencies": {
-    "ampersand-state": "^1.0.0",
+    "ampersand-state": "^2.0.0",
     "ampersand-sync": "^1.0.0",
     "underscore": "^1.6.0"
   },
