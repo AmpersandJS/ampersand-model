@@ -217,5 +217,6 @@ var wrapError = function (model, options) {
     };
 };
 
+Model.dataTypes = BaseState.dataTypes;
 Model.extend = BaseState.extend;
 module.exports = Model;
