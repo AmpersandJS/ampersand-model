@@ -3,7 +3,7 @@
   "version": "2.10.3",
   "author": "Henrik Joreteg <henrik@andyet.net>",
   "bugs": {
-    "url": "https://github.com/henrikjoreteg/ampersand-model/issues"
+    "url": "https://github.com/ampersandjs/ampersand-model/issues"
   },
   "dependencies": {
     "ampersand-state": "^4.0.0",
@@ -27,7 +27,7 @@
   "main": "./ampersand-model.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/henrikjoreteg/ampersand-model.git"
+    "url": "https://github.com/ampersandjs/ampersand-model.git"
   },
   "scripts": {
     "start": "run-browser test/index.js",
