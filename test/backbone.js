@@ -773,7 +773,7 @@ var Backbone = {
         model.set({a: 'a', b: 'b', c: 'c'});
     });
 
-    test("#871, set with attributes property", function (t) {
+    test.skip("#871, set with attributes property", function (t) {
         t.plan(1);
         var model = new Backbone.Model();
         model.set({attributes: true});
