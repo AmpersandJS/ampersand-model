@@ -15,9 +15,7 @@ function Model(attrs, options) {
 var attributeOptions = ['collection', 'registry'];
 var BaseState = State.extend({});
 
-Model.prototype = Object.create(BaseState.prototype, {
-    constructor: Model
-});
+Model.prototype = Object.create(BaseState.prototype);
 
 // Set up all inheritable properties and methods.
 _.extend(Model.prototype, {
