@@ -1,3 +1,4 @@
+/* global console */
 var _ = require('underscore');
 
 var tape = require('tape');
@@ -8,6 +9,9 @@ tape.Test.prototype.strictEqual = function () {
     this.equal.apply(this, arguments);
 };
 
+tape.skip = function (name) {
+    console.log('SKIPPING', name);
+};
 
 //stub qunit module
 function module(moduleName, opts) {
@@ -15,6 +19,13 @@ function module(moduleName, opts) {
         if (opts.setup) opts.setup();
         tape.call(tape, moduleName + ' - ' + testName, cb);
     };
+
+    test.only = function (testName, cb) {
+        if (opts.setup) opts.setup();
+        tape.only.call(tape, moduleName + ' - ' + testName, cb);
+    };
+
+    test.skip = tape.skip;
 }
 
 //Stub out sync for now since it needs window
@@ -166,7 +177,7 @@ var Backbone = {
         t.equal(model.url(), '/nested/1/collection/2');
     });
 
-    test("underscore methods", function (t) {
+    test.skip("underscore methods", function (t) {
         t.plan(5);
         var model = new Backbone.Model({ 'foo': 'a', 'bar': 'b', 'baz': 'c' });
         var model2 = model.clone();
