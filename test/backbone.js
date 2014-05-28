@@ -1013,7 +1013,6 @@ var Backbone = {
     });
 
     test("nested `change:attr` with silent", function (t) {
-        t.plan(0);
         var model = new Backbone.Model();
         model.on('change:y', function () { t.ok(false); });
         model.on('change', function () {
@@ -1021,6 +1020,7 @@ var Backbone = {
             model.set({z: true});
         });
         model.set({x: true});
+        t.end();
     });
 
     test("multiple nested changes with silent", function (t) {
