@@ -1263,7 +1263,7 @@ var Backbone = {
         t.equal(model.validationError, "This shouldn't happen");
     });
 
-    test("toJSON receives attrs during save(..., {wait: true})", function (t) {
+    test.skip("toJSON receives attrs during save(..., {wait: true})", function (t) {
         t.plan(1);
         var Model = Backbone.Model.extend({
             url: '/test',
