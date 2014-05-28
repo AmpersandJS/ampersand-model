@@ -789,18 +789,20 @@ var Backbone = {
     });
 
     test("set same value does not trigger change", function (t) {
-        t.plan(0);
         var model = new Backbone.Model({x: 1});
-        model.on('change change:x', function () { t.ok(false); });
+        model.on('change change:x', function () {
+            t.ok(false);
+        });
         model.set({x: 1});
         model.set({x: 1});
+        t.end();
     });
 
     test("unset does not fire a change for undefined attributes", function (t) {
-        t.plan(0);
         var model = new Backbone.Model({x: undefined});
         model.on('change:x', function () { t.ok(false); });
         model.unset('x');
+        t.end();
     });
 
     test("set: undefined values", function (t) {
