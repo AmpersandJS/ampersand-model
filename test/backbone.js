@@ -1080,7 +1080,7 @@ var Backbone = {
 
     test("#1122 - unset does not alter options.", function (t) {
         t.plan(1);
-        var model = new Backbone.Model();
+        var model = new Backbone.Model({x: 1});
         var options = {};
         model.unset('x', options);
         t.ok(!options.unset);
