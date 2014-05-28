@@ -188,7 +188,7 @@ var Backbone = {
         t.deepEqual(model.omit('foo', 'bar'), {'baz': 'c'});
     });
 
-    test("chain", function (t) {
+    test.skip("chain", function (t) {
         t.plan(1);
         var model = new Backbone.Model({ a: 0, b: 1, c: 2 });
         t.deepEqual(model.chain().pick("a", "b", "c").values().compact().value(), [1, 2]);
