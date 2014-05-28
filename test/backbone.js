@@ -1191,11 +1191,11 @@ var Backbone = {
     });
 
     test("#1791 - `attributes` is available for `parse`", function (t) {
-        t.plan(0);
         var Model = Backbone.Model.extend({
             parse: function () { this.has('a'); } // shouldn't throw an error
         });
         var model = new Model(null, {parse: true});
+        t.end();
     });
 
     test("silent changes in last `change` event back to original triggers change", function (t) {
