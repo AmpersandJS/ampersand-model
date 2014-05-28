@@ -1141,7 +1141,6 @@ var Backbone = {
     });
 
     test("#1545 - `undefined` can be passed to a model constructor without coersion", function (t) {
-        t.plan(1);
         var Model = Backbone.Model.extend({
             defaults: { one: 1 },
             initialize : function (attrs, opts) {
@@ -1150,6 +1149,7 @@ var Backbone = {
         });
         var emptyattrs = new Model();
         var undefinedattrs = new Model(undefined);
+        t.end();
     });
 
     test("#1478 - Model `save` does not trigger change on unchanged attributes", function (t) {
