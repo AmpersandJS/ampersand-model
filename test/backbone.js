@@ -183,7 +183,8 @@ var Backbone = {
         t.deepEqual(model.chain().pick("a", "b", "c").values().compact().value(), [1, 2]);
     });
 
-    test("clone", 10, function () {
+    test("clone", function (t) {
+        t.plan(10);
         var a = new Backbone.Model({ 'foo': 1, 'bar': 2, 'baz': 3});
         var b = a.clone();
         t.equal(a.get('foo'), 1);
@@ -235,7 +236,8 @@ var Backbone = {
         t.equal(doc.escape('audience'), '');
     });
 
-    test("has", 10, function () {
+    test("has", function (t) {
+        t.plan(10);
         var model = new Backbone.Model();
 
         t.strictEqual(model.has('name'), false);
