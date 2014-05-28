@@ -436,23 +436,21 @@ var Backbone = {
         t.equal(model.get('name'), undefined);
     });
 
-    test("defaults", function (t) {
+    test.skip("defaults", function (t) {
         t.plan(4);
         var Defaulted = Backbone.Model.extend({
-            defaults: {
-                "one": 1,
-                "two": 2
+            props: {
+                "one": ['number', true, 1],
+                "two": ['number', true, 2]
             }
         });
         var model = new Defaulted({two: undefined});
         t.equal(model.get('one'), 1);
         t.equal(model.get('two'), 2);
         Defaulted = Backbone.Model.extend({
-            defaults: function () {
-                return {
-                    "one": 3,
-                    "two": 4
-                };
+            props: {
+                "one": ['number', true, 3],
+                "two": ['number', true, 4]
             }
         });
         model = new Defaulted({two: undefined});
