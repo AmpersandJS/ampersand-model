@@ -108,9 +108,9 @@ var Backbone = {
     test("initialize with defaults", function (t) {
         t.plan(2);
         var Model = Backbone.Model.extend({
-            defaults: {
-                first_name: 'Unknown',
-                last_name: 'Unknown'
+            props: {
+                first_name: ['string', true, 'Unknown'],
+                last_name: ['string', true, 'Unknown']
             }
         });
         var model = new Model({'first_name': 'John'});
