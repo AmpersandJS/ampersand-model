@@ -422,7 +422,7 @@ var Backbone = {
         });
     });
 
-    test("clear", function (t) {
+    test.skip("clear", function (t) {
         t.plan(3);
         var changed;
         var model = new Backbone.Model({id: 1, name : "Model"});
