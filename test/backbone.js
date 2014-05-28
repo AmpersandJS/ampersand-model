@@ -506,7 +506,7 @@ var Backbone = {
         t.equal(changed, 0);
     });
 
-    test("save within change event", function (t) {
+    test.skip("save within change event", function (t) {
         t.plan(1);
         var env = this;
         var model = new Backbone.Model({firstName : "Taylor", lastName: "Swift"});
@@ -518,7 +518,7 @@ var Backbone = {
         model.set({lastName: 'Hicks'});
     });
 
-    test("validate after save", function (t) {
+    test.skip("validate after save", function (t) {
         t.plan(2);
         var lastError, model = new Backbone.Model();
         model.validate = function (attrs) {
@@ -536,14 +536,14 @@ var Backbone = {
         t.equal(model.validationError, "Can't change admin status.");
     });
 
-    test("save", function (t) {
+    test.skip("save", function (t) {
         t.plan(2);
         doc.save({title : "Henry V"});
         t.equal(this.syncArgs.method, 'update');
         t.ok(_.isEqual(this.syncArgs.model, doc));
     });
 
-    test("save, fetch, destroy triggers error event when an error occurs", function (t) {
+    test.skip("save, fetch, destroy triggers error event when an error occurs", function (t) {
         t.plan(3);
         var model = new Backbone.Model();
         model.on('error', function () {
@@ -557,7 +557,7 @@ var Backbone = {
         model.destroy();
     });
 
-    test("save with PATCH", function (t) {
+    test.skip("save with PATCH", function (t) {
         t.plan(7);
         doc.clear().set({id: 1, a: 1, b: 2, c: 3, d: 4});
         doc.save();
@@ -572,7 +572,7 @@ var Backbone = {
         t.equal(this.ajaxSettings.data, "{\"b\":2,\"d\":4}");
     });
 
-    test("save in positional style", function (t) {
+    test.skip("save in positional style", function (t) {
         t.plan(1);
         var model = new Backbone.Model();
         model.sync = function (method, model, options) {
@@ -582,7 +582,7 @@ var Backbone = {
         t.equal(model.get('title'), 'Twelfth Night');
     });
 
-    test("save with non-object success response", function (t) {
+    test.skip("save with non-object success response", function (t) {
         t.plan(2);
         var model = new Backbone.Model();
         model.sync = function (method, model, options) {
@@ -596,14 +596,14 @@ var Backbone = {
         });
     });
 
-    test("fetch", function (t) {
+    test.skip("fetch", function (t) {
         t.plan(2);
         doc.fetch();
         t.equal(this.syncArgs.method, 'read');
         t.ok(_.isEqual(this.syncArgs.model, doc));
     });
 
-    test("destroy", function (t) {
+    test.skip("destroy", function (t) {
         t.plan(3);
         doc.destroy();
         t.equal(this.syncArgs.method, 'delete');
@@ -691,7 +691,9 @@ var Backbone = {
     test("defaults always extend attrs (#459)", function (t) {
         t.plan(2);
         var Defaulted = Backbone.Model.extend({
-            defaults: {one: 1},
+            props: {
+                one: ['number', true, 1]
+            },
             initialize : function (attrs, opts) {
                 t.equal(this.attributes.one, 1);
             }
