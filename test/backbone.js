@@ -1,7 +1,50 @@
-function f() {}
-var Backbone = {};
-var test = f, equal = f, raises = f, deepEqual = f, ok = f, strictEqual = f, notEqual = f, asyncTest = f, start = f, expect = f;
-var _ = { };
+var _ = require('underscore');
+
+var tape = require('tape');
+var test = tape;
+
+//qunit has equal/strictEqual, we just have equal
+tape.Test.prototype.strictEqual = function () {
+    this.equal.apply(this, arguments);
+};
+
+
+//stub qunit module
+function module(moduleName, opts) {
+    test = function (testName, cb) {
+        if (opts.setup) opts.setup();
+        tape.call(tape, moduleName + ' - ' + testName, cb);
+    };
+}
+
+//Stub out sync for now since it needs window
+var proxyquire = require('proxyquire');
+proxyquire('../ampersand-model', {
+    'ampersand-sync': {
+        '@noCallThru': true
+    }
+});
+var AmpersandModel = require('../ampersand-model');
+//Let's fake some backbone things to minimize test changes
+var Backbone = {
+    Model: AmpersandModel.extend({
+        extraProperties: 'allow'
+    }),
+    Collection: {
+        extend: function (o) {
+            var Coll = function () {
+                var k;
+                for (k in o) {
+                    this[k] = o[k];
+                }
+            };
+            Coll.prototype.add = function (m) {
+                m.collection = this;
+            };
+            return Coll;
+        }
+    }
+};
 
 (function () {
 
@@ -26,29 +69,32 @@ var _ = { };
 
     });
 
-    test("initialize", 3, function () {
+    test("initialize", function (t) {
+        t.plan(3);
         var Model = Backbone.Model.extend({
             initialize: function () {
                 this.one = 1;
-                equal(this.collection, collection);
+                t.equal(this.collection, collection);
             }
         });
         var model = new Model({}, {collection: collection});
-        equal(model.one, 1);
-        equal(model.collection, collection);
+        t.equal(model.one, 1);
+        t.equal(model.collection, collection);
     });
 
-    test("initialize with attributes and options", 1, function () {
+    test("initialize with attributes and options", function (t) {
+        t.plan(1);
         var Model = Backbone.Model.extend({
             initialize: function (attributes, options) {
                 this.one = options.one;
             }
         });
         var model = new Model({}, {one: 1});
-        equal(model.one, 1);
+        t.equal(model.one, 1);
     });
 
-    test("initialize with parsed attributes", 1, function () {
+    test("initialize with parsed attributes", function (t) {
+        t.plan(1);
         var Model = Backbone.Model.extend({
             parse: function (attrs) {
                 attrs.value += 1;
@@ -56,10 +102,11 @@ var _ = { };
             }
         });
         var model = new Model({value: 1}, {parse: true});
-        equal(model.get('value'), 2);
+        t.equal(model.get('value'), 2);
     });
 
-    test("initialize with defaults", 2, function () {
+    test("initialize with defaults", function (t) {
+        t.plan(2);
         var Model = Backbone.Model.extend({
             defaults: {
                 first_name: 'Unknown',
@@ -67,11 +114,12 @@ var _ = { };
             }
         });
         var model = new Model({'first_name': 'John'});
-        equal(model.get('first_name'), 'John');
-        equal(model.get('last_name'), 'Unknown');
+        t.equal(model.get('first_name'), 'John');
+        t.equal(model.get('last_name'), 'Unknown');
     });
 
-    test("parse can return null", 1, function () {
+    test("parse can return null", function (t) {
+        t.plan(1);
         var Model = Backbone.Model.extend({
             parse: function (attrs) {
                 attrs.value += 1;
@@ -79,30 +127,33 @@ var _ = { };
             }
         });
         var model = new Model({value: 1}, {parse: true});
-        equal(JSON.stringify(model.toJSON()), "{}");
+        t.equal(JSON.stringify(model.toJSON()), "{}");
     });
 
-    test("url", 3, function () {
+    test("url", function (t) {
+        t.plan(3);
         doc.urlRoot = null;
-        equal(doc.url(), '/collection/1-the-tempest');
+        t.equal(doc.url(), '/collection/1-the-tempest');
         doc.collection.url = '/collection/';
-        equal(doc.url(), '/collection/1-the-tempest');
+        t.equal(doc.url(), '/collection/1-the-tempest');
         doc.collection = null;
-        raises(function () { doc.url(); });
+        t.throws(function () { doc.url(); });
         doc.collection = collection;
     });
 
-    test("url when using urlRoot, and uri encoding", 2, function () {
+    test("url when using urlRoot, and uri encoding", function (t) {
+        t.plan(2);
         var Model = Backbone.Model.extend({
             urlRoot: '/collection'
         });
         var model = new Model();
-        equal(model.url(), '/collection');
+        t.equal(model.url(), '/collection');
         model.set({id: '+1+'});
-        equal(model.url(), '/collection/%2B1%2B');
+        t.equal(model.url(), '/collection/%2B1%2B');
     });
 
-    test("url when using urlRoot as a function to determine urlRoot at runtime", 2, function () {
+    test("url when using urlRoot as a function to determine urlRoot at runtime", function (t) {
+        t.plan(2);
         var Model = Backbone.Model.extend({
             urlRoot: function () {
                 return '/nested/' + this.get('parent_id') + '/collection';
@@ -110,79 +161,84 @@ var _ = { };
         });
 
         var model = new Model({parent_id: 1});
-        equal(model.url(), '/nested/1/collection');
+        t.equal(model.url(), '/nested/1/collection');
         model.set({id: 2});
-        equal(model.url(), '/nested/1/collection/2');
+        t.equal(model.url(), '/nested/1/collection/2');
     });
 
-    test("underscore methods", 5, function () {
+    test("underscore methods", function (t) {
+        t.plan(5);
         var model = new Backbone.Model({ 'foo': 'a', 'bar': 'b', 'baz': 'c' });
         var model2 = model.clone();
-        deepEqual(model.keys(), ['foo', 'bar', 'baz']);
-        deepEqual(model.values(), ['a', 'b', 'c']);
-        deepEqual(model.invert(), { 'a': 'foo', 'b': 'bar', 'c': 'baz' });
-        deepEqual(model.pick('foo', 'baz'), {'foo': 'a', 'baz': 'c'});
-        deepEqual(model.omit('foo', 'bar'), {'baz': 'c'});
+        t.deepEqual(model.keys(), ['foo', 'bar', 'baz']);
+        t.deepEqual(model.values(), ['a', 'b', 'c']);
+        t.deepEqual(model.invert(), { 'a': 'foo', 'b': 'bar', 'c': 'baz' });
+        t.deepEqual(model.pick('foo', 'baz'), {'foo': 'a', 'baz': 'c'});
+        t.deepEqual(model.omit('foo', 'bar'), {'baz': 'c'});
     });
 
-    test("chain", function () {
+    test("chain", function (t) {
+        t.plan(1);
         var model = new Backbone.Model({ a: 0, b: 1, c: 2 });
-        deepEqual(model.chain().pick("a", "b", "c").values().compact().value(), [1, 2]);
+        t.deepEqual(model.chain().pick("a", "b", "c").values().compact().value(), [1, 2]);
     });
 
     test("clone", 10, function () {
         var a = new Backbone.Model({ 'foo': 1, 'bar': 2, 'baz': 3});
         var b = a.clone();
-        equal(a.get('foo'), 1);
-        equal(a.get('bar'), 2);
-        equal(a.get('baz'), 3);
-        equal(b.get('foo'), a.get('foo'), "Foo should be the same on the clone.");
-        equal(b.get('bar'), a.get('bar'), "Bar should be the same on the clone.");
-        equal(b.get('baz'), a.get('baz'), "Baz should be the same on the clone.");
+        t.equal(a.get('foo'), 1);
+        t.equal(a.get('bar'), 2);
+        t.equal(a.get('baz'), 3);
+        t.equal(b.get('foo'), a.get('foo'), "Foo should be the same on the clone.");
+        t.equal(b.get('bar'), a.get('bar'), "Bar should be the same on the clone.");
+        t.equal(b.get('baz'), a.get('baz'), "Baz should be the same on the clone.");
         a.set({foo : 100});
-        equal(a.get('foo'), 100);
-        equal(b.get('foo'), 1, "Changing a parent attribute does not change the clone.");
+        t.equal(a.get('foo'), 100);
+        t.equal(b.get('foo'), 1, "Changing a parent attribute does not change the clone.");
 
         var foo = new Backbone.Model({p: 1});
         var bar = new Backbone.Model({p: 2});
         bar.set(foo.clone().attributes, {unset: true});
-        equal(foo.get('p'), 1);
-        equal(bar.get('p'), undefined);
+        t.equal(foo.get('p'), 1);
+        t.equal(bar.get('p'), undefined);
     });
 
-    test("isNew", 6, function () {
+    test("isNew", function (t) {
+        t.plan(6);
         var a = new Backbone.Model({ 'foo': 1, 'bar': 2, 'baz': 3});
-        ok(a.isNew(), "it should be new");
+        t.ok(a.isNew(), "it should be new");
         a = new Backbone.Model({ 'foo': 1, 'bar': 2, 'baz': 3, 'id': -5 });
-        ok(!a.isNew(), "any defined ID is legal, negative or positive");
+        t.ok(!a.isNew(), "any defined ID is legal, negative or positive");
         a = new Backbone.Model({ 'foo': 1, 'bar': 2, 'baz': 3, 'id': 0 });
-        ok(!a.isNew(), "any defined ID is legal, including zero");
-        ok(new Backbone.Model({          }).isNew(), "is true when there is no id");
-        ok(!new Backbone.Model({ 'id': 2  }).isNew(), "is false for a positive integer");
-        ok(!new Backbone.Model({ 'id': -5 }).isNew(), "is false for a negative integer");
+        t.ok(!a.isNew(), "any defined ID is legal, including zero");
+        t.ok(new Backbone.Model({          }).isNew(), "is true when there is no id");
+        t.ok(!new Backbone.Model({ 'id': 2  }).isNew(), "is false for a positive integer");
+        t.ok(!new Backbone.Model({ 'id': -5 }).isNew(), "is false for a negative integer");
     });
 
-    test("get", 2, function () {
-        equal(doc.get('title'), 'The Tempest');
-        equal(doc.get('author'), 'Bill Shakespeare');
+    test("get", function (t) {
+        t.plan(2);
+        t.equal(doc.get('title'), 'The Tempest');
+        t.equal(doc.get('author'), 'Bill Shakespeare');
     });
 
-    test("escape", 5, function () {
-        equal(doc.escape('title'), 'The Tempest');
+    test("escape", function (t) {
+        t.plan(5);
+        t.equal(doc.escape('title'), 'The Tempest');
         doc.set({audience: 'Bill & Bob'});
-        equal(doc.escape('audience'), 'Bill &amp; Bob');
+        t.equal(doc.escape('audience'), 'Bill &amp; Bob');
         doc.set({audience: 'Tim > Joan'});
-        equal(doc.escape('audience'), 'Tim &gt; Joan');
+        t.equal(doc.escape('audience'), 'Tim &gt; Joan');
         doc.set({audience: 10101});
-        equal(doc.escape('audience'), '10101');
+        t.equal(doc.escape('audience'), '10101');
         doc.unset('audience');
-        equal(doc.escape('audience'), '');
+        t.equal(doc.escape('audience'), '');
     });
 
     test("has", 10, function () {
         var model = new Backbone.Model();
 
-        strictEqual(model.has('name'), false);
+        t.strictEqual(model.has('name'), false);
 
         model.set({
             '0': 0,
@@ -195,44 +251,46 @@ var _ = { };
             'undefined': undefined
         });
 
-        strictEqual(model.has('0'), true);
-        strictEqual(model.has('1'), true);
-        strictEqual(model.has('true'), true);
-        strictEqual(model.has('false'), true);
-        strictEqual(model.has('empty'), true);
-        strictEqual(model.has('name'), true);
+        t.strictEqual(model.has('0'), true);
+        t.strictEqual(model.has('1'), true);
+        t.strictEqual(model.has('true'), true);
+        t.strictEqual(model.has('false'), true);
+        t.strictEqual(model.has('empty'), true);
+        t.strictEqual(model.has('name'), true);
 
         model.unset('name');
 
-        strictEqual(model.has('name'), false);
-        strictEqual(model.has('null'), false);
-        strictEqual(model.has('undefined'), false);
+        t.strictEqual(model.has('name'), false);
+        t.strictEqual(model.has('null'), false);
+        t.strictEqual(model.has('undefined'), false);
     });
 
-    test("set and unset", 8, function () {
+    test("set and unset", function (t) {
+        t.plan(8);
         var a = new Backbone.Model({id: 'id', foo: 1, bar: 2, baz: 3});
         var changeCount = 0;
         a.on("change:foo", function () { changeCount += 1; });
         a.set({'foo': 2});
-        ok(a.get('foo') == 2, "Foo should have changed.");
-        ok(changeCount == 1, "Change count should have incremented.");
+        t.ok(a.get('foo') == 2, "Foo should have changed.");
+        t.ok(changeCount == 1, "Change count should have incremented.");
         a.set({'foo': 2}); // set with value that is not new shouldn't fire change event
-        ok(a.get('foo') == 2, "Foo should NOT have changed, still 2");
-        ok(changeCount == 1, "Change count should NOT have incremented.");
+        t.ok(a.get('foo') == 2, "Foo should NOT have changed, still 2");
+        t.ok(changeCount == 1, "Change count should NOT have incremented.");
 
         a.validate = function (attrs) {
-            equal(attrs.foo, void 0, "validate:true passed while unsetting");
+            t.equal(attrs.foo, void 0, "validate:true passed while unsetting");
         };
         a.unset('foo', {validate: true});
-        equal(a.get('foo'), void 0, "Foo should have changed");
+        t.equal(a.get('foo'), void 0, "Foo should have changed");
         delete a.validate;
-        ok(changeCount == 2, "Change count should have incremented for unset.");
+        t.ok(changeCount == 2, "Change count should have incremented for unset.");
 
         a.unset('id');
-        equal(a.id, undefined, "Unsetting the id should remove the id property.");
+        t.equal(a.id, undefined, "Unsetting the id should remove the id property.");
     });
 
-    test("#2030 - set with failed validate, followed by another set triggers change", function () {
+    test("#2030 - set with failed validate, followed by another set triggers change", function (t) {
+        t.plan(1);
         var attr = 0, main = 0, error = 0;
         var Model = Backbone.Model.extend({
             validate: function (attr) {
@@ -247,24 +305,26 @@ var _ = { };
         model.on('change', function () { main++; });
         model.set({x: 2}, {validate: true});
         model.set({x: 1}, {validate: true});
-        deepEqual([attr, main, error], [1, 1, 1]);
+        t.deepEqual([attr, main, error], [1, 1, 1]);
     });
 
-    test("set triggers changes in the correct order", function () {
+    test("set triggers changes in the correct order", function (t) {
+        t.plan(1);
         var value = null;
         var model = new Backbone.Model();
         model.on('last', function () { value = 'last'; });
         model.on('first', function () { value = 'first'; });
         model.trigger('first');
         model.trigger('last');
-        equal(value, 'last');
+        t.equal(value, 'last');
     });
 
-    test("set falsy values in the correct order", 2, function () {
+    test("set falsy values in the correct order", function (t) {
+        t.plan(2);
         var model = new Backbone.Model({result: 'result'});
         model.on('change', function () {
-            equal(model.changed.result, void 0);
-            equal(model.previous('result'), false);
+            t.equal(model.changed.result, void 0);
+            t.equal(model.previous('result'), false);
         });
         model.set({result: void 0}, {silent: true});
         model.set({result: null}, {silent: true});
@@ -272,7 +332,8 @@ var _ = { };
         model.set({result: void 0});
     });
 
-    test("nested set triggers with the correct options", function () {
+    test("nested set triggers with the correct options", function (t) {
+        t.plan(3);
         var model = new Backbone.Model();
         var o1 = {};
         var o2 = {};
@@ -280,19 +341,20 @@ var _ = { };
         model.on('change', function (__, options) {
             switch (model.get('a')) {
                 case 1:
-                    equal(options, o1);
+                    t.equal(options, o1);
                     return model.set('a', 2, o2);
                 case 2:
-                    equal(options, o2);
+                    t.equal(options, o2);
                     return model.set('a', 3, o3);
                 case 3:
-                    equal(options, o3);
+                    t.equal(options, o3);
             }
         });
         model.set('a', 1, o1);
     });
 
-    test("multiple unsets", 1, function () {
+    test("multiple unsets", function (t) {
+        t.plan(1);
         var i = 0;
         var counter = function () { i++; };
         var model = new Backbone.Model({a: 1});
@@ -300,40 +362,44 @@ var _ = { };
         model.set({a: 2});
         model.unset('a');
         model.unset('a');
-        equal(i, 2, 'Unset does not fire an event for missing attributes.');
+        t.equal(i, 2, 'Unset does not fire an event for missing attributes.');
     });
 
-    test("unset and changedAttributes", 1, function () {
+    test("unset and changedAttributes", function (t) {
+        t.plan(1);
         var model = new Backbone.Model({a: 1});
         model.on('change', function () {
-            ok('a' in model.changedAttributes(), 'changedAttributes should contain unset properties');
+            t.ok('a' in model.changedAttributes(), 'changedAttributes should contain unset properties');
         });
         model.unset('a');
     });
 
-    test("using a non-default id attribute.", 5, function () {
+    test("using a non-default id attribute.", function (t) {
+        t.plan(5);
         var MongoModel = Backbone.Model.extend({idAttribute : '_id'});
         var model = new MongoModel({id: 'eye-dee', _id: 25, title: 'Model'});
-        equal(model.get('id'), 'eye-dee');
-        equal(model.id, 25);
-        equal(model.isNew(), false);
+        t.equal(model.get('id'), 'eye-dee');
+        t.equal(model.id, 25);
+        t.equal(model.isNew(), false);
         model.unset('_id');
-        equal(model.id, undefined);
-        equal(model.isNew(), true);
+        t.equal(model.id, undefined);
+        t.equal(model.isNew(), true);
     });
 
-    test("set an empty string", 1, function () {
+    test("set an empty string", function (t) {
+        t.plan(1);
         var model = new Backbone.Model({name : "Model"});
         model.set({name : ''});
-        equal(model.get('name'), '');
+        t.equal(model.get('name'), '');
     });
 
-    test("setting an object", 1, function () {
+    test("setting an object", function (t) {
+        t.plan(1);
         var model = new Backbone.Model({
             custom: { foo: 1 }
         });
         model.on('change', function () {
-            ok(1);
+            t.ok(1);
         });
         model.set({
             custom: { foo: 1 } // no change should be fired
@@ -343,20 +409,22 @@ var _ = { };
         });
     });
 
-    test("clear", 3, function () {
+    test("clear", function (t) {
+        t.plan(3);
         var changed;
         var model = new Backbone.Model({id: 1, name : "Model"});
         model.on("change:name", function () { changed = true; });
         model.on("change", function () {
             var changedAttrs = model.changedAttributes();
-            ok('name' in changedAttrs);
+            t.ok('name' in changedAttrs);
         });
         model.clear();
-        equal(changed, true);
-        equal(model.get('name'), undefined);
+        t.equal(changed, true);
+        t.equal(model.get('name'), undefined);
     });
 
-    test("defaults", 4, function () {
+    test("defaults", function (t) {
+        t.plan(4);
         var Defaulted = Backbone.Model.extend({
             defaults: {
                 "one": 1,
@@ -364,8 +432,8 @@ var _ = { };
             }
         });
         var model = new Defaulted({two: undefined});
-        equal(model.get('one'), 1);
-        equal(model.get('two'), 2);
+        t.equal(model.get('one'), 1);
+        t.equal(model.get('two'), 2);
         Defaulted = Backbone.Model.extend({
             defaults: function () {
                 return {
@@ -375,66 +443,72 @@ var _ = { };
             }
         });
         model = new Defaulted({two: undefined});
-        equal(model.get('one'), 3);
-        equal(model.get('two'), 4);
+        t.equal(model.get('one'), 3);
+        t.equal(model.get('two'), 4);
     });
 
-    test("change, hasChanged, changedAttributes, previous, previousAttributes", 9, function () {
+    test("change, hasChanged, changedAttributes, previous, previousAttributes", function (t) {
+        t.plan(9);
         var model = new Backbone.Model({name: "Tim", age: 10});
-        deepEqual(model.changedAttributes(), false);
+        t.deepEqual(model.changedAttributes(), false);
         model.on('change', function () {
-            ok(model.hasChanged('name'), 'name changed');
-            ok(!model.hasChanged('age'), 'age did not');
-            ok(_.isEqual(model.changedAttributes(), {name : 'Rob'}), 'changedAttributes returns the changed attrs');
-            equal(model.previous('name'), 'Tim');
-            ok(_.isEqual(model.previousAttributes(), {name : "Tim", age : 10}), 'previousAttributes is correct');
+            t.ok(model.hasChanged('name'), 'name changed');
+            t.ok(!model.hasChanged('age'), 'age did not');
+            t.ok(_.isEqual(model.changedAttributes(), {name : 'Rob'}), 'changedAttributes returns the changed attrs');
+            t.equal(model.previous('name'), 'Tim');
+            t.ok(_.isEqual(model.previousAttributes(), {name : "Tim", age : 10}), 'previousAttributes is correct');
         });
-        equal(model.hasChanged(), false);
-        equal(model.hasChanged(undefined), false);
+        t.equal(model.hasChanged(), false);
+        t.equal(model.hasChanged(undefined), false);
         model.set({name : 'Rob'});
-        equal(model.get('name'), 'Rob');
+        t.equal(model.get('name'), 'Rob');
     });
 
-    test("changedAttributes", 3, function () {
+    test("changedAttributes", function (t) {
+        t.plan(3);
         var model = new Backbone.Model({a: 'a', b: 'b'});
-        deepEqual(model.changedAttributes(), false);
-        equal(model.changedAttributes({a: 'a'}), false);
-        equal(model.changedAttributes({a: 'b'}).a, 'b');
+        t.deepEqual(model.changedAttributes(), false);
+        t.equal(model.changedAttributes({a: 'a'}), false);
+        t.equal(model.changedAttributes({a: 'b'}).a, 'b');
     });
 
-    test("change with options", 2, function () {
+    test("change with options", function (t) {
+        t.plan(2);
         var value;
         var model = new Backbone.Model({name: 'Rob'});
         model.on('change', function (model, options) {
             value = options.prefix + model.get('name');
         });
         model.set({name: 'Bob'}, {prefix: 'Mr. '});
-        equal(value, 'Mr. Bob');
+        t.equal(value, 'Mr. Bob');
         model.set({name: 'Sue'}, {prefix: 'Ms. '});
-        equal(value, 'Ms. Sue');
+        t.equal(value, 'Ms. Sue');
     });
 
-    test("change after initialize", 1, function () {
+    test("change after initialize", function (t) {
+        t.plan(1);
         var changed = 0;
         var attrs = {id: 1, label: 'c'};
         var obj = new Backbone.Model(attrs);
         obj.on('change', function () { changed += 1; });
         obj.set(attrs);
-        equal(changed, 0);
+        t.equal(changed, 0);
     });
 
-    test("save within change event", 1, function () {
+    test("save within change event", function (t) {
+        t.plan(1);
         var env = this;
         var model = new Backbone.Model({firstName : "Taylor", lastName: "Swift"});
         model.url = '/test';
         model.on('change', function () {
             model.save();
-            ok(_.isEqual(env.syncArgs.model, model));
+            t.ok(_.isEqual(env.syncArgs.model, model));
         });
         model.set({lastName: 'Hicks'});
     });
 
-    test("validate after save", 2, function () {
+    test("validate after save", function (t) {
+        t.plan(2);
         var lastError, model = new Backbone.Model();
         model.validate = function (attrs) {
             if (attrs.admin) return "Can't change admin status.";
@@ -447,20 +521,22 @@ var _ = { };
         });
         model.save(null);
 
-        equal(lastError, "Can't change admin status.");
-        equal(model.validationError, "Can't change admin status.");
+        t.equal(lastError, "Can't change admin status.");
+        t.equal(model.validationError, "Can't change admin status.");
     });
 
-    test("save", 2, function () {
+    test("save", function (t) {
+        t.plan(2);
         doc.save({title : "Henry V"});
-        equal(this.syncArgs.method, 'update');
-        ok(_.isEqual(this.syncArgs.model, doc));
+        t.equal(this.syncArgs.method, 'update');
+        t.ok(_.isEqual(this.syncArgs.model, doc));
     });
 
-    test("save, fetch, destroy triggers error event when an error occurs", 3, function () {
+    test("save, fetch, destroy triggers error event when an error occurs", function (t) {
+        t.plan(3);
         var model = new Backbone.Model();
         model.on('error', function () {
-            ok(true);
+            t.ok(true);
         });
         model.sync = function (method, model, options) {
             options.error();
@@ -470,30 +546,33 @@ var _ = { };
         model.destroy();
     });
 
-    test("save with PATCH", function () {
+    test("save with PATCH", function (t) {
+        t.plan(7);
         doc.clear().set({id: 1, a: 1, b: 2, c: 3, d: 4});
         doc.save();
-        equal(this.syncArgs.method, 'update');
-        equal(this.syncArgs.options.attrs, undefined);
+        t.equal(this.syncArgs.method, 'update');
+        t.equal(this.syncArgs.options.attrs, undefined);
 
         doc.save({b: 2, d: 4}, {patch: true});
-        equal(this.syncArgs.method, 'patch');
-        equal(_.size(this.syncArgs.options.attrs), 2);
-        equal(this.syncArgs.options.attrs.d, 4);
-        equal(this.syncArgs.options.attrs.a, undefined);
-        equal(this.ajaxSettings.data, "{\"b\":2,\"d\":4}");
+        t.equal(this.syncArgs.method, 'patch');
+        t.equal(_.size(this.syncArgs.options.attrs), 2);
+        t.equal(this.syncArgs.options.attrs.d, 4);
+        t.equal(this.syncArgs.options.attrs.a, undefined);
+        t.equal(this.ajaxSettings.data, "{\"b\":2,\"d\":4}");
     });
 
-    test("save in positional style", 1, function () {
+    test("save in positional style", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.sync = function (method, model, options) {
             options.success();
         };
         model.save('title', 'Twelfth Night');
-        equal(model.get('title'), 'Twelfth Night');
+        t.equal(model.get('title'), 'Twelfth Night');
     });
 
-    test("save with non-object success response", 2, function () {
+    test("save with non-object success response", function (t) {
+        t.plan(2);
         var model = new Backbone.Model();
         model.sync = function (method, model, options) {
             options.success('', options);
@@ -501,34 +580,38 @@ var _ = { };
         };
         model.save({testing: 'empty'}, {
             success: function (model) {
-                deepEqual(model.attributes, {testing: 'empty'});
+                t.deepEqual(model.attributes, {testing: 'empty'});
             }
         });
     });
 
-    test("fetch", 2, function () {
+    test("fetch", function (t) {
+        t.plan(2);
         doc.fetch();
-        equal(this.syncArgs.method, 'read');
-        ok(_.isEqual(this.syncArgs.model, doc));
+        t.equal(this.syncArgs.method, 'read');
+        t.ok(_.isEqual(this.syncArgs.model, doc));
     });
 
-    test("destroy", 3, function () {
+    test("destroy", function (t) {
+        t.plan(3);
         doc.destroy();
-        equal(this.syncArgs.method, 'delete');
-        ok(_.isEqual(this.syncArgs.model, doc));
+        t.equal(this.syncArgs.method, 'delete');
+        t.ok(_.isEqual(this.syncArgs.model, doc));
 
         var newModel = new Backbone.Model();
-        equal(newModel.destroy(), false);
+        t.equal(newModel.destroy(), false);
     });
 
-    test("non-persisted destroy", 1, function () {
+    test("non-persisted destroy", function (t) {
+        t.plan(1);
         var a = new Backbone.Model({ 'foo': 1, 'bar': 2, 'baz': 3});
         a.sync = function () { throw "should not be called"; };
         a.destroy();
-        ok(true, "non-persisted model should not call sync");
+        t.ok(true, "non-persisted model should not call sync");
     });
 
-    test("validate", function () {
+    test("validate", function (t) {
+        t.plan(7);
         var lastError;
         var model = new Backbone.Model();
         model.validate = function (attrs) {
@@ -538,18 +621,19 @@ var _ = { };
             lastError = error;
         });
         var result = model.set({a: 100});
-        equal(result, model);
-        equal(model.get('a'), 100);
-        equal(lastError, undefined);
+        t.equal(result, model);
+        t.equal(model.get('a'), 100);
+        t.equal(lastError, undefined);
         result = model.set({admin: true});
-        equal(model.get('admin'), true);
+        t.equal(model.get('admin'), true);
         result = model.set({a: 200, admin: false}, {validate: true});
-        equal(lastError, "Can't change admin status.");
-        equal(result, false);
-        equal(model.get('a'), 100);
+        t.equal(lastError, "Can't change admin status.");
+        t.equal(result, false);
+        t.equal(model.get('a'), 100);
     });
 
-    test("validate on unset and clear", 6, function () {
+    test("validate on unset and clear", function (t) {
+        t.plan(6);
         var error;
         var model = new Backbone.Model({name: "One"});
         model.validate = function (attrs) {
@@ -559,19 +643,20 @@ var _ = { };
             }
         };
         model.set({name: "Two"});
-        equal(model.get('name'), 'Two');
-        equal(error, undefined);
+        t.equal(model.get('name'), 'Two');
+        t.equal(error, undefined);
         model.unset('name', {validate: true});
-        equal(error, true);
-        equal(model.get('name'), 'Two');
+        t.equal(error, true);
+        t.equal(model.get('name'), 'Two');
         model.clear({validate: true});
-        equal(model.get('name'), 'Two');
+        t.equal(model.get('name'), 'Two');
         delete model.validate;
         model.clear();
-        equal(model.get('name'), undefined);
+        t.equal(model.get('name'), undefined);
     });
 
-    test("validate with error callback", 8, function () {
+    test("validate with error callback", function (t) {
+        t.plan(8);
         var lastError, boundError;
         var model = new Backbone.Model();
         model.validate = function (attrs) {
@@ -581,29 +666,31 @@ var _ = { };
             boundError = true;
         });
         var result = model.set({a: 100}, {validate: true});
-        equal(result, model);
-        equal(model.get('a'), 100);
-        equal(model.validationError, null);
-        equal(boundError, undefined);
+        t.equal(result, model);
+        t.equal(model.get('a'), 100);
+        t.equal(model.validationError, null);
+        t.equal(boundError, undefined);
         result = model.set({a: 200, admin: true}, {validate: true});
-        equal(result, false);
-        equal(model.get('a'), 100);
-        equal(model.validationError, "Can't change admin status.");
-        equal(boundError, true);
+        t.equal(result, false);
+        t.equal(model.get('a'), 100);
+        t.equal(model.validationError, "Can't change admin status.");
+        t.equal(boundError, true);
     });
 
-    test("defaults always extend attrs (#459)", 2, function () {
+    test("defaults always extend attrs (#459)", function (t) {
+        t.plan(2);
         var Defaulted = Backbone.Model.extend({
             defaults: {one: 1},
             initialize : function (attrs, opts) {
-                equal(this.attributes.one, 1);
+                t.equal(this.attributes.one, 1);
             }
         });
         var providedattrs = new Defaulted({});
         var emptyattrs = new Defaulted();
     });
 
-    test("Inherit class properties", 6, function () {
+    test("Inherit class properties", function (t) {
+        t.plan(6);
         var Parent = Backbone.Model.extend({
             instancePropSame: function () {},
             instancePropDiff: function () {}
@@ -617,50 +704,53 @@ var _ = { };
         var adult = new Parent();
         var kid   = new Child();
 
-        equal(Child.classProp, Parent.classProp);
-        notEqual(Child.classProp, undefined);
+        t.equal(Child.classProp, Parent.classProp);
+        t.notEqual(Child.classProp, undefined);
 
-        equal(kid.instancePropSame, adult.instancePropSame);
-        notEqual(kid.instancePropSame, undefined);
+        t.equal(kid.instancePropSame, adult.instancePropSame);
+        t.notEqual(kid.instancePropSame, undefined);
 
-        notEqual(Child.prototype.instancePropDiff, Parent.prototype.instancePropDiff);
-        notEqual(Child.prototype.instancePropDiff, undefined);
+        t.notEqual(Child.prototype.instancePropDiff, Parent.prototype.instancePropDiff);
+        t.notEqual(Child.prototype.instancePropDiff, undefined);
     });
 
-    test("Nested change events don't clobber previous attributes", 4, function () {
+    test("Nested change events don't clobber previous attributes", function (t) {
+        t.plan(4);
         new Backbone.Model()
         .on('change:state', function (model, newState) {
-            equal(model.previous('state'), undefined);
-            equal(newState, 'hello');
+            t.equal(model.previous('state'), undefined);
+            t.equal(newState, 'hello');
             // Fire a nested change event.
             model.set({other: 'whatever'});
         })
         .on('change:state', function (model, newState) {
-            equal(model.previous('state'), undefined);
-            equal(newState, 'hello');
+            t.equal(model.previous('state'), undefined);
+            t.equal(newState, 'hello');
         })
         .set({state: 'hello'});
     });
 
-    test("hasChanged/set should use same comparison", 2, function () {
+    test("hasChanged/set should use same comparison", function (t) {
+        t.plan(2);
         var changed = 0, model = new Backbone.Model({a: null});
         model.on('change', function () {
-            ok(this.hasChanged('a'));
+            t.ok(this.hasChanged('a'));
         })
         .on('change:a', function () {
             changed++;
         })
         .set({a: undefined});
-        equal(changed, 1);
+        t.equal(changed, 1);
     });
 
-    test("#582, #425, change:attribute callbacks should fire after all changes have occurred", 9, function () {
+    test("#582, #425, change:attribute callbacks should fire after all changes have occurred", function (t) {
+        t.plan(9);
         var model = new Backbone.Model();
 
         var assertion = function () {
-            equal(model.get('a'), 'a');
-            equal(model.get('b'), 'b');
-            equal(model.get('c'), 'c');
+            t.equal(model.get('a'), 'a');
+            t.equal(model.get('b'), 'b');
+            t.equal(model.get('c'), 'c');
         };
 
         model.on('change:a', assertion);
@@ -670,146 +760,164 @@ var _ = { };
         model.set({a: 'a', b: 'b', c: 'c'});
     });
 
-    test("#871, set with attributes property", 1, function () {
+    test("#871, set with attributes property", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.set({attributes: true});
-        ok(model.has('attributes'));
+        t.ok(model.has('attributes'));
     });
 
-    test("set value regardless of equality/change", 1, function () {
+    test("set value regardless of t.equality/change", function (t) {
+        t.plan(1);
         var model = new Backbone.Model({x: []});
         var a = [];
         model.set({x: a});
-        ok(model.get('x') === a);
+        t.ok(model.get('x') === a);
     });
 
-    test("set same value does not trigger change", 0, function () {
+    test("set same value does not trigger change", function (t) {
+        t.plan(0);
         var model = new Backbone.Model({x: 1});
-        model.on('change change:x', function () { ok(false); });
+        model.on('change change:x', function () { t.ok(false); });
         model.set({x: 1});
         model.set({x: 1});
     });
 
-    test("unset does not fire a change for undefined attributes", 0, function () {
+    test("unset does not fire a change for undefined attributes", function (t) {
+        t.plan(0);
         var model = new Backbone.Model({x: undefined});
-        model.on('change:x', function () { ok(false); });
+        model.on('change:x', function () { t.ok(false); });
         model.unset('x');
     });
 
-    test("set: undefined values", 1, function () {
+    test("set: undefined values", function (t) {
+        t.plan(1);
         var model = new Backbone.Model({x: undefined});
-        ok('x' in model.attributes);
+        t.ok('x' in model.attributes);
     });
 
-    test("hasChanged works outside of change events, and true within", 6, function () {
+    test("hasChanged works outside of change events, and true within", function (t) {
+        t.plan(6);
         var model = new Backbone.Model({x: 1});
         model.on('change:x', function () {
-            ok(model.hasChanged('x'));
-            equal(model.get('x'), 1);
+            t.ok(model.hasChanged('x'));
+            t.equal(model.get('x'), 1);
         });
         model.set({x: 2}, {silent: true});
-        ok(model.hasChanged());
-        equal(model.hasChanged('x'), true);
+        t.ok(model.hasChanged());
+        t.equal(model.hasChanged('x'), true);
         model.set({x: 1});
-        ok(model.hasChanged());
-        equal(model.hasChanged('x'), true);
+        t.ok(model.hasChanged());
+        t.equal(model.hasChanged('x'), true);
     });
 
-    test("hasChanged gets cleared on the following set", 4, function () {
+    test("hasChanged gets cleared on the following set", function (t) {
+        t.plan(4);
         var model = new Backbone.Model();
         model.set({x: 1});
-        ok(model.hasChanged());
+        t.ok(model.hasChanged());
         model.set({x: 1});
-        ok(!model.hasChanged());
+        t.ok(!model.hasChanged());
         model.set({x: 2});
-        ok(model.hasChanged());
+        t.ok(model.hasChanged());
         model.set({});
-        ok(!model.hasChanged());
+        t.ok(!model.hasChanged());
     });
 
-    test("save with `wait` succeeds without `validate`", 1, function () {
+    test("save with `wait` succeeds without `validate`", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.url = '/test';
         model.save({x: 1}, {wait: true});
-        ok(this.syncArgs.model === model);
+        t.ok(this.syncArgs.model === model);
     });
 
-    test("save without `wait` doesn't set invalid attributes", function () {
+    test("save without `wait` doesn't set invalid attributes", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.validate = function () { return 1; };
         model.save({a: 1});
-        equal(model.get('a'), void 0);
+        t.equal(model.get('a'), void 0);
     });
 
-    test("save doesn't validate twice", function () {
+    test("save doesn't validate twice", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         var times = 0;
         model.sync = function () {};
         model.validate = function () { ++times; };
         model.save({});
-        equal(times, 1);
+        t.equal(times, 1);
     });
 
-    test("`hasChanged` for falsey keys", 2, function () {
+    test("`hasChanged` for falsey keys", function (t) {
+        t.plan(2);
         var model = new Backbone.Model();
         model.set({x: true}, {silent: true});
-        ok(!model.hasChanged(0));
-        ok(!model.hasChanged(''));
+        t.ok(!model.hasChanged(0));
+        t.ok(!model.hasChanged(''));
     });
 
-    test("`previous` for falsey keys", 2, function () {
+    test("`previous` for falsey keys", function (t) {
+        t.plan(2);
         var model = new Backbone.Model({0: true, '': true});
         model.set({0: false, '': false}, {silent: true});
-        equal(model.previous(0), true);
-        equal(model.previous(''), true);
+        t.equal(model.previous(0), true);
+        t.equal(model.previous(''), true);
     });
 
-    test("`save` with `wait` sends correct attributes", 5, function () {
+    test("`save` with `wait` sends correct attributes", function (t) {
+        t.plan(5);
         var changed = 0;
         var model = new Backbone.Model({x: 1, y: 2});
         model.url = '/test';
         model.on('change:x', function () { changed++; });
         model.save({x: 3}, {wait: true});
-        deepEqual(JSON.parse(this.ajaxSettings.data), {x: 3, y: 2});
-        equal(model.get('x'), 1);
-        equal(changed, 0);
+        t.deepEqual(JSON.parse(this.ajaxSettings.data), {x: 3, y: 2});
+        t.equal(model.get('x'), 1);
+        t.equal(changed, 0);
         this.syncArgs.options.success({});
-        equal(model.get('x'), 3);
-        equal(changed, 1);
+        t.equal(model.get('x'), 3);
+        t.equal(changed, 1);
     });
 
-    test("a failed `save` with `wait` doesn't leave attributes behind", 1, function () {
+    test("a failed `save` with `wait` doesn't leave attributes behind", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.url = '/test';
         model.save({x: 1}, {wait: true});
-        equal(model.get('x'), void 0);
+        t.equal(model.get('x'), void 0);
     });
 
-    test("#1030 - `save` with `wait` results in correct attributes if success is called during sync", 2, function () {
+    test("#1030 - `save` with `wait` results in correct attributes if success is called during sync", function (t) {
+        t.plan(2);
         var model = new Backbone.Model({x: 1, y: 2});
         model.sync = function (method, model, options) {
             options.success();
         };
-        model.on("change:x", function () { ok(true); });
+        model.on("change:x", function () { t.ok(true); });
         model.save({x: 3}, {wait: true});
-        equal(model.get('x'), 3);
+        t.equal(model.get('x'), 3);
     });
 
-    test("save with wait validates attributes", function () {
+    test("save with wait validates attributes", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.url = '/test';
-        model.validate = function () { ok(true); };
+        model.validate = function () { t.ok(true); };
         model.save({x: 1}, {wait: true});
     });
 
-    test("save turns on parse flag", function () {
+    test("save turns on parse flag", function (t) {
+        t.plan(1);
         var Model = Backbone.Model.extend({
-            sync: function (method, model, options) { ok(options.parse); }
+            sync: function (method, model, options) { t.ok(options.parse); }
         });
         new Model().save();
     });
 
-    test("nested `set` during `'change:attr'`", 2, function () {
+    test("nested `set` during `'change:attr'`", function (t) {
+        t.plan(2);
         var events = [];
         var model = new Backbone.Model();
         model.on('all', function (event) { events.push(event); });
@@ -820,75 +928,79 @@ var _ = { };
             model.set({y: true});
         });
         model.set({x: true});
-        deepEqual(events, ['change:y', 'change:x', 'change']);
+        t.deepEqual(events, ['change:y', 'change:x', 'change']);
         events = [];
         model.set({z: true});
-        deepEqual(events, []);
+        t.deepEqual(events, []);
     });
 
-    test("nested `change` only fires once", 1, function () {
+    test("nested `change` only fires once", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.on('change', function () {
-            ok(true);
+            t.ok(true);
             model.set({x: true});
         });
         model.set({x: true});
     });
 
-    test("nested `set` during `'change'`", 6, function () {
+    test("nested `set` during `'change'`", function (t) {
+        t.plan(6);
         var count = 0;
         var model = new Backbone.Model();
         model.on('change', function () {
             switch (count++) {
                 case 0:
-                    deepEqual(this.changedAttributes(), {x: true});
-                    equal(model.previous('x'), undefined);
+                    t.deepEqual(this.changedAttributes(), {x: true});
+                    t.equal(model.previous('x'), undefined);
                     model.set({y: true});
                     break;
                 case 1:
-                    deepEqual(this.changedAttributes(), {x: true, y: true});
-                    equal(model.previous('x'), undefined);
+                    t.deepEqual(this.changedAttributes(), {x: true, y: true});
+                    t.equal(model.previous('x'), undefined);
                     model.set({z: true});
                     break;
                 case 2:
-                    deepEqual(this.changedAttributes(), {x: true, y: true, z: true});
-                    equal(model.previous('y'), undefined);
+                    t.deepEqual(this.changedAttributes(), {x: true, y: true, z: true});
+                    t.equal(model.previous('y'), undefined);
                     break;
                 default:
-                    ok(false);
+                    t.ok(false);
             }
         });
         model.set({x: true});
     });
 
-    test("nested `change` with silent", 3, function () {
+    test("nested `change` with silent", function (t) {
+        t.plan(3);
         var count = 0;
         var model = new Backbone.Model();
-        model.on('change:y', function () { ok(false); });
+        model.on('change:y', function () { t.ok(false); });
         model.on('change', function () {
             switch (count++) {
                 case 0:
-                    deepEqual(this.changedAttributes(), {x: true});
+                    t.deepEqual(this.changedAttributes(), {x: true});
                     model.set({y: true}, {silent: true});
                     model.set({z: true});
                     break;
                 case 1:
-                    deepEqual(this.changedAttributes(), {x: true, y: true, z: true});
+                    t.deepEqual(this.changedAttributes(), {x: true, y: true, z: true});
                     break;
                 case 2:
-                    deepEqual(this.changedAttributes(), {z: false});
+                    t.deepEqual(this.changedAttributes(), {z: false});
                     break;
                 default:
-                    ok(false);
+                    t.ok(false);
             }
         });
         model.set({x: true});
         model.set({z: false});
     });
 
-    test("nested `change:attr` with silent", 0, function () {
+    test("nested `change:attr` with silent", function (t) {
+        t.plan(0);
         var model = new Backbone.Model();
-        model.on('change:y', function () { ok(false); });
+        model.on('change:y', function () { t.ok(false); });
         model.on('change', function () {
             model.set({y: true}, {silent: true});
             model.set({z: true});
@@ -896,19 +1008,21 @@ var _ = { };
         model.set({x: true});
     });
 
-    test("multiple nested changes with silent", 1, function () {
+    test("multiple nested changes with silent", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.on('change:x', function () {
             model.set({y: 1}, {silent: true});
             model.set({y: 2});
         });
         model.on('change:y', function (model, val) {
-            equal(val, 2);
+            t.equal(val, 2);
         });
         model.set({x: true});
     });
 
-    test("multiple nested changes with silent", 1, function () {
+    test("multiple nested changes with silent", function (t) {
+        t.plan(1);
         var changes = [];
         var model = new Backbone.Model();
         model.on('change:b', function (model, val) { changes.push(val); });
@@ -916,21 +1030,23 @@ var _ = { };
             model.set({b: 1});
         });
         model.set({b: 0});
-        deepEqual(changes, [0, 1]);
+        t.deepEqual(changes, [0, 1]);
     });
 
-    test("basic silent change semantics", 1, function () {
+    test("basic silent change semantics", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.set({x: 1});
-        model.on('change', function () { ok(true); });
+        model.on('change', function () { t.ok(true); });
         model.set({x: 2}, {silent: true});
         model.set({x: 1});
     });
 
-    test("nested set multiple times", 1, function () {
+    test("nested set multiple times", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.on('change:b', function () {
-            ok(true);
+            t.ok(true);
         });
         model.on('change:a', function () {
             model.set({b: true});
@@ -939,25 +1055,28 @@ var _ = { };
         model.set({a: true});
     });
 
-    test("#1122 - clear does not alter options.", 1, function () {
+    test("#1122 - clear does not alter options.", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         var options = {};
         model.clear(options);
-        ok(!options.unset);
+        t.ok(!options.unset);
     });
 
-    test("#1122 - unset does not alter options.", 1, function () {
+    test("#1122 - unset does not alter options.", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         var options = {};
         model.unset('x', options);
-        ok(!options.unset);
+        t.ok(!options.unset);
     });
 
-    test("#1355 - `options` is passed to success callbacks", 3, function () {
+    test("#1355 - `options` is passed to success callbacks", function (t) {
+        t.plan(3);
         var model = new Backbone.Model();
         var opts = {
             success: function (model, resp, options) {
-                ok(options);
+                t.ok(options);
             }
         };
         model.sync = function (method, model, options) {
@@ -968,74 +1087,81 @@ var _ = { };
         model.destroy(opts);
     });
 
-    test("#1412 - Trigger 'sync' event.", 3, function () {
+    test("#1412 - Trigger 'sync' event.", function (t) {
+        t.plan(3);
         var model = new Backbone.Model({id: 1});
         model.sync = function (method, model, options) { options.success(); };
-        model.on('sync', function () { ok(true); });
+        model.on('sync', function () { t.ok(true); });
         model.fetch();
         model.save();
         model.destroy();
     });
 
-    test("#1365 - Destroy: New models execute success callback.", 2, function () {
+    test("#1365 - Destroy: New models execute success callback.", function (t) {
+        t.plan(2);
         new Backbone.Model()
-        .on('sync', function () { ok(false); })
-        .on('destroy', function () { ok(true); })
-        .destroy({ success: function () { ok(true); }});
+        .on('sync', function () { t.ok(false); })
+        .on('destroy', function () { t.ok(true); })
+        .destroy({ success: function () { t.ok(true); }});
     });
 
-    test("#1433 - Save: An invalid model cannot be persisted.", 1, function () {
+    test("#1433 - Save: An invalid model cannot be persisted.", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.validate = function () { return 'invalid'; };
-        model.sync = function () { ok(false); };
-        strictEqual(model.save(), false);
+        model.sync = function () { t.ok(false); };
+        t.strictEqual(model.save(), false);
     });
 
-    test("#1377 - Save without attrs triggers 'error'.", 1, function () {
+    test("#1377 - Save without attrs triggers 'error'.", function (t) {
+        t.plan(1);
         var Model = Backbone.Model.extend({
             url: '/test/',
             sync: function (method, model, options) { options.success(); },
             validate: function () { return 'invalid'; }
         });
         var model = new Model({id: 1});
-        model.on('invalid', function () { ok(true); });
+        model.on('invalid', function () { t.ok(true); });
         model.save();
     });
 
-    test("#1545 - `undefined` can be passed to a model constructor without coersion", function () {
+    test("#1545 - `undefined` can be passed to a model constructor without coersion", function (t) {
+        t.plan(1);
         var Model = Backbone.Model.extend({
             defaults: { one: 1 },
             initialize : function (attrs, opts) {
-                equal(attrs, undefined);
+                t.equal(attrs, undefined);
             }
         });
         var emptyattrs = new Model();
         var undefinedattrs = new Model(undefined);
     });
 
-    asyncTest("#1478 - Model `save` does not trigger change on unchanged attributes", 0, function () {
+    test("#1478 - Model `save` does not trigger change on unchanged attributes", function (t) {
         var Model = Backbone.Model.extend({
             sync: function (method, model, options) {
                 setTimeout(function () {
                     options.success();
-                    start();
+                    t.end();
                 }, 0);
             }
         });
         new Model({x: true})
-        .on('change:x', function () { ok(false); })
+        .on('change:x', function () { t.ok(false); })
         .save(null, {wait: true});
     });
 
-    test("#1664 - Changing from one value, silently to another, back to original triggers a change.", 1, function () {
+    test("#1664 - Changing from one value, silently to another, back to original triggers a change.", function (t) {
+        t.plan(1);
         var model = new Backbone.Model({x: 1});
-        model.on('change:x', function () { ok(true); });
+        model.on('change:x', function () { t.ok(true); });
         model.set({x: 2}, {silent: true});
         model.set({x: 3}, {silent: true});
         model.set({x: 1});
     });
 
-    test("#1664 - multiple silent changes nested inside a change event", 2, function () {
+    test("#1664 - multiple silent changes nested inside a change event", function (t) {
+        t.plan(2);
         var changes = [];
         var model = new Backbone.Model();
         model.on('change', function () {
@@ -1045,19 +1171,20 @@ var _ = { };
         });
         model.on('change:a change:b change:c', function (model, val) { changes.push(val); });
         model.set({a: 'a', b: 1, c: 'item'});
-        deepEqual(changes, ['a', 1, 'item']);
-        deepEqual(model.attributes, {a: 'c', b: 2});
+        t.deepEqual(changes, ['a', 1, 'item']);
+        t.deepEqual(model.attributes, {a: 'c', b: 2});
     });
 
-    test("#1791 - `attributes` is available for `parse`", function () {
+    test("#1791 - `attributes` is available for `parse`", function (t) {
+        t.plan(0);
         var Model = Backbone.Model.extend({
             parse: function () { this.has('a'); } // shouldn't throw an error
         });
         var model = new Model(null, {parse: true});
-        expect(0);
     });
 
-    test("silent changes in last `change` event back to original triggers change", 2, function () {
+    test("silent changes in last `change` event back to original triggers change", function (t) {
+        t.plan(2);
         var changes = [];
         var model = new Backbone.Model();
         model.on('change:a change:b change:c', function (model, val) { changes.push(val); });
@@ -1065,62 +1192,68 @@ var _ = { };
             model.set({a: 'c'}, {silent: true});
         });
         model.set({a: 'a'});
-        deepEqual(changes, ['a']);
+        t.deepEqual(changes, ['a']);
         model.set({a: 'a'});
-        deepEqual(changes, ['a', 'a']);
+        t.deepEqual(changes, ['a', 'a']);
     });
 
-    test("#1943 change calculations should use _.isEqual", function () {
+    test("#1943 change calculations should use _.isEqual", function (t) {
+        t.plan(1);
         var model = new Backbone.Model({a: {key: 'value'}});
         model.set('a', {key: 'value'}, {silent: true});
-        equal(model.changedAttributes(), false);
+        t.equal(model.changedAttributes(), false);
     });
 
-    test("#1964 - final `change` event is always fired, regardless of interim changes", 1, function () {
+    test("#1964 - final `change` event is always fired, regardless of interim changes", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.on('change:property', function () {
             model.set('property', 'bar');
         });
         model.on('change', function () {
-            ok(true);
+            t.ok(true);
         });
         model.set('property', 'foo');
     });
 
-    test("isValid", function () {
+    test("isValid", function (t) {
+        t.plan(5);
         var model = new Backbone.Model({valid: true});
         model.validate = function (attrs) {
             if (!attrs.valid) return "invalid";
         };
-        equal(model.isValid(), true);
-        equal(model.set({valid: false}, {validate: true}), false);
-        equal(model.isValid(), true);
+        t.equal(model.isValid(), true);
+        t.equal(model.set({valid: false}, {validate: true}), false);
+        t.equal(model.isValid(), true);
         model.set({valid: false});
-        equal(model.isValid(), false);
-        ok(!model.set('valid', false, {validate: true}));
+        t.equal(model.isValid(), false);
+        t.ok(!model.set('valid', false, {validate: true}));
     });
 
-    test("#1179 - isValid returns true in the absence of validate.", 1, function () {
+    test("#1179 - isValid returns true in the absence of validate.", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.validate = null;
-        ok(model.isValid());
+        t.ok(model.isValid());
     });
 
-    test("#1961 - Creating a model with {validate:true} will call validate and use the error callback", function () {
+    test("#1961 - Creating a model with {validate:true} will call validate and use the error callback", function (t) {
+        t.plan(1);
         var Model = Backbone.Model.extend({
             validate: function (attrs) {
                 if (attrs.id === 1) return "This shouldn't happen";
             }
         });
         var model = new Model({id: 1}, {validate: true});
-        equal(model.validationError, "This shouldn't happen");
+        t.equal(model.validationError, "This shouldn't happen");
     });
 
-    test("toJSON receives attrs during save(..., {wait: true})", 1, function () {
+    test("toJSON receives attrs during save(..., {wait: true})", function (t) {
+        t.plan(1);
         var Model = Backbone.Model.extend({
             url: '/test',
             toJSON: function () {
-                strictEqual(this.attributes.x, 1);
+                t.strictEqual(this.attributes.x, 1);
                 return _.clone(this.attributes);
             }
         });
@@ -1128,11 +1261,12 @@ var _ = { };
         model.save({x: 1}, {wait: true});
     });
 
-    test("#2034 - nested set with silent only triggers one change", 1, function () {
+    test("#2034 - nested set with silent only triggers one change", function (t) {
+        t.plan(1);
         var model = new Backbone.Model();
         model.on('change', function () {
             model.set({b: true}, {silent: true});
-            ok(true);
+            t.ok(true);
         });
         model.set({a: true});
     });
