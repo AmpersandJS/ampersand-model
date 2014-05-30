@@ -37,9 +37,17 @@ proxyquire('../ampersand-model', {
 });
 var AmpersandModel = require('../ampersand-model');
 //Let's fake some backbone things to minimize test changes
+var env = {};
 var Backbone = {
     Model: AmpersandModel.extend({
-        extraProperties: 'allow'
+        extraProperties: 'allow',
+        sync: function (method, model, options) {
+            env.syncArgs = {
+                method: method,
+                model: model,
+                options: options
+            };
+        }
     }),
     Collection: {
         extend: function (o) {
@@ -506,9 +514,9 @@ var Backbone = {
         t.equal(changed, 0);
     });
 
-    test.skip("save within change event", function (t) {
+    test("save within change event", function (t) {
         t.plan(1);
-        var env = this;
+        //var env = this;
         var model = new Backbone.Model({firstName : "Taylor", lastName: "Swift"});
         model.url = '/test';
         model.on('change', function () {
@@ -518,7 +526,7 @@ var Backbone = {
         model.set({lastName: 'Hicks'});
     });
 
-    test.skip("validate after save", function (t) {
+    test("validate after save", function (t) {
         t.plan(2);
         var lastError, model = new Backbone.Model();
         model.validate = function (attrs) {
@@ -536,14 +544,14 @@ var Backbone = {
         t.equal(model.validationError, "Can't change admin status.");
     });
 
-    test.skip("save", function (t) {
+    test("save", function (t) {
         t.plan(2);
         doc.save({title : "Henry V"});
-        t.equal(this.syncArgs.method, 'update');
-        t.ok(_.isEqual(this.syncArgs.model, doc));
+        t.equal(env.syncArgs.method, 'update');
+        t.ok(_.isEqual(env.syncArgs.model, doc));
     });
 
-    test.skip("save, fetch, destroy triggers error event when an error occurs", function (t) {
+    test("save, fetch, destroy triggers error event when an error occurs", function (t) {
         t.plan(3);
         var model = new Backbone.Model();
         model.on('error', function () {
@@ -557,18 +565,18 @@ var Backbone = {
         model.destroy();
     });
 
-    test.skip("save with PATCH", function (t) {
+    test.only("save with PATCH", function (t) {
         t.plan(7);
         doc.clear().set({id: 1, a: 1, b: 2, c: 3, d: 4});
         doc.save();
-        t.equal(this.syncArgs.method, 'update');
-        t.equal(this.syncArgs.options.attrs, undefined);
+        t.equal(env.syncArgs.method, 'update');
+        t.equal(env.syncArgs.options.attrs, undefined);
 
         doc.save({b: 2, d: 4}, {patch: true});
-        t.equal(this.syncArgs.method, 'patch');
-        t.equal(_.size(this.syncArgs.options.attrs), 2);
-        t.equal(this.syncArgs.options.attrs.d, 4);
-        t.equal(this.syncArgs.options.attrs.a, undefined);
+        t.equal(env.syncArgs.method, 'patch');
+        t.equal(_.size(env.syncArgs.options.attrs), 2);
+        t.equal(env.syncArgs.options.attrs.d, 4);
+        t.equal(env.syncArgs.options.attrs.a, undefined);
         t.equal(this.ajaxSettings.data, "{\"b\":2,\"d\":4}");
     });
 
