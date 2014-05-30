@@ -135,3 +135,13 @@ test('should store models in the registry', function (t) {
     blah.firstName = 'blah';
     t.end();
 });
+
+test('constructor should be defined', function (t) {
+    var Foo = Model.extend({
+        props: { name: 'string' }
+    });
+    var foo = new Foo();
+
+    t.ok(foo.constructor);
+    t.end();
+});
