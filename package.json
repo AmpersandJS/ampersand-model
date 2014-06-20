@@ -1,6 +1,6 @@
 {
   "name": "ampersand-model",
-  "version": "2.10.7",
+  "version": "3.0.0",
   "author": "Henrik Joreteg <henrik@andyet.net>",
   "bugs": {
     "url": "https://github.com/ampersandjs/ampersand-model/issues"
