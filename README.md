@@ -4,83 +4,14 @@
 Part of the [Ampersand.js toolkit](http://ampersandjs.com) for building clientside applications.
 <!-- endhide -->
 
-ampersand-model helps you create observable models for your apps. Most commonly in clientside frameworks, your models are what hold data fetched from your API. But really, it's all about having a way to separate concerns. Your models should be your authoritive "source of truth" when it comes to all state held in your application.
+ampersand-model is an extension built on [ampersand-state](http://ampersandjs.com/docs/#ampersand-state) to provide methods and properties that you'll often want when modeling data you get from an API.
 
-ampersand-model intentionally force you to explicitly define what the model is going to store.
-
-This ensures that the model code, which is so central to the app, ends up serving as a bit of documentation for the app. A new dev can go look at what's being stored in what types of models.
-
-This is hugely important for enabling teams to work on the same app together. 
-
-Ampersand-model gets most of it's features from [ampersand-state](http://ampersandjs.com/docs/#ampersand-state) but also adds in the tools you'll need for working with a server API. 
-
+For further explanation see the [learn ampersand-state](http://ampersandjs.com/learn/state) guide.
 
 ## Installing
 
 ```
 npm install ampersand-model
-```
-
-## Usage
-
-
-This module exports just one thing. The constructor for an Ampersand Model with an `extend` method that you'll use to define your model.
-
-Typically you create a file for each type of model in your app:
-
-File: `client/models/person.js`
-
-```js
-var AmpersandModel = require('ampersand-model');
-
-
-// In your model you'll export a version of AmpersandModel
-// extended with your properties and methods.
-module.exports = AmpersandModel.extend({
-    props: {
-        name: 'string',
-        age: 'number'
-    }
-});
-
-```
-
-Then using it would look like this:
-
-File: `client/some-other-file.js`
-
-```js
-// we require our person model we defined in the module above
-var PersonModel = require('./models/person');
-
-
-// We can now create instances of the model 
-// using `new` and setting attributes.
-var mary = new PersonModel({name: 'mary'});
-```
-
-## Getting and setting properties
-
-With ampersand models you don't have to use `set` and `get` (though, you still can). You can simply set and assign values to properties and change events will still fire so the object can be observed.
-
-It does this using [`Object.defineProperty`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty) under the hood.
-
-
-```js
-var person = new Person({name: 'mary'});
-
-// all of these are identical
-person.name = 'sue';
-person.set(name, 'sue');
-person.set({name: 'sue'});
-
-// but there are times when it's useful to use `set`
-// like not firing events
-person.set({name: 'sue'}, {silent: true});
-
-// or setting multiple things at once
-person.set({name: 'bob', age: 30});
-
 ```
 
 ## Observing
@@ -97,39 +28,32 @@ For more, [read all about how events work in ampersand](http://ampersandjs.com/l
 
 The module exports just one item, the ampersand-model constructor. It's has a method called `extend` that works as follows:
 
-### .extend(modelDefinition)
+### extend `AmpersandModel.extend({ })`
 
-* Returns: {Constructor} A custom constructor for generating instances of the model you defined.
-* `modelDefinition` {Object} An object containing your entire model definition
-  * `props` {Object} An object of named property definitions
-  * `session` {Object} An object of named session property definitions
-  * `derived` {Object} An object of named derived property definitions
-    * `derivedDefinition` {Object | Function} This can either be a single function or an object describing the derived property and its dependencies.
-      * `deps` {Array} An array containing strings of other property names or derived property names. When these change, the derived property is re-calculated and only if different than previous cached value, a `change` event is fired for the derived property.
-      * `fn` {Function} A function that returns the value of the derived property. This function's `this` will be the model instance.
-      * `cache` {Boolean} Default: `true` Whether or not to cache the result.
-  * `initialize` {Function} Default: `function () {}` An overridable function that will be called as a last step in the instantiation process for your model. It get called with as the constructor got. 
+To create a **Model** class of your own, you extend **AmpersandModel** and provide instance properties and options for your class. Typically here you will pass any properties (`props`, `session`, and `derived`) of your model class, and any instance methods to be attached to instances of your class.
 
+**extend** correctly sets up the prototype chain, so that subclasses created with **extend** can be further extended as many times as you like.
 
-`extend` is the main method you'll use to create model definitions. It returns a custom constructor that can be used to create instances of your custom model.
+As with AmpersandState, definitions like `props`, `session`, `derived` etc will be merged with superclass definitions.
 
-As an example imagine two modules `app.js` and `UserModel.js`.
-
-The contents of `UserModel.js` defines a model:
-
-```js
-var AmpersandModel = require('ampersand-model');
-
-// define a model
-var UserModel = AmpersandModel.extend({
+```javascript
+var Person = AmpersandModel.extend({
     props: {
-        name: 'string'
+        firstName: 'string',
+        lastName: 'string'
+    },
+    session: {
+        signedIn: ['boolean', true, false],
+    },
+    derived: {
+        fullName: {
+            deps: ['firstName', 'lastName'],
+            fn: function () {
+                return this.firstName + ' ' + this.lastName;
+            }
+        }
     }
 });
-
-var user = new User({name: 'henrik'});
-
-console.log(user.name); // logs out 'henrik'
 ```
 
 ### idAttribute `model.idAttribute`
@@ -153,30 +77,77 @@ var me = new Person({ personId: 123 });
 console.log(me.url()) //=> "/people/123"
 ```
 
-
-### namespaceAttribute
-
-### typeAttribute
-
 ### getId `model.getId()`
 
 Get ID of model per `idAttribute` configuration. Should *always* be how ID is determined by other code.
+
+### namespaceAttribute `model.namespaceAttribute`
+
+The property name that should be used as a namespace. Namespaces are completely optional, but exist in case you need to make an additionl distinction between models, that may be of the same type, with potentially conflicting IDs but are in fact different.
+
+Defaults to `'namespace'`.
 
 ### getNamespace `model.getNamespace()`
 
 Get namespace of model per `namespaceAttribute` configuration. Should *always* be how namespace is determined by other code.
 
+### typeAttribute
+
+The property name that should be used to specify what type of model this is. This is optional, but specifying a model type types provides a standard, yet configurable way to determine what type of model it is.
+
+Defaults to `'modelType'`.
+
 ### getType `model.getType()`
 
 Get type of model per `typeAttribute` configuration. Should *always* be how type is determined by other code.
 
-### constructor/initialize
 
-### collection
+### constructor/initialize `new ExtendedAmpersandModel([attrs], [options])`
 
-### registry
+This works exactly like [state](http://ampersandjs.com/docs/#ampersand-state-constructorinitialize) with a minor addition: If you pass `collection` as part of options it'll be stored for reference.
+
+As with AmpersandState, if you have defined an **initialize** function for your subclass of State, it will be invoked at creation time.
+
+```javascript
+var me = new Person({
+    firstName: 'Phil'
+    lastName: 'Roberts'
+});
+
+me.firstName //=> Phil
+```
+
+Available options:
+
+* `[parse]` {Boolean} - whether to call the class's [parse](#ampersand-state-parse) function with the initial attributes. _Defaults to `false`_.
+* `[parent]` {AmpersandState} - pass a reference to a model's parent to store on the model.
+* `[collection]` {Collection} - pass a reference to the collection the model is in. Defaults to `undefined`.
+
+
+### collection `model.collection`
+
+A reference to the collection a model is in, if in a collection.
+
+This is used for building the default `url` property, etc. 
+
+Which is why you can do this:
+
+```js
+// some ampersand-rest-collection instance
+// with a `url` property
+widgets.url //=> '/api/widgets'
+
+// get a widget from our collection
+var badWidget = widgets.get('47');
+
+// Without a `collection` reference this
+// widget wouldn't know what URL to build
+// when calling destroy
+badWidget.destroy(); // does a DELETE /api/widgets/47
+```
 
 ### cid `model.cid`
+
 A special property of models, the **cid**, or a client id, is a unique identifier automatically assigned to all models when they are first created. Client ids are handy when the model has not been saved to the server, and so does not yet have it's true **id** but needs a unique id so it can be rendered in the UI etc.
 
 ```javascript
@@ -189,7 +160,7 @@ console.log(userB.cid) //=> "model-2"
 
 ### save `model.save([attributes], [options])`
 
-Save a model to your database (or alternative persistence layer), by delegating to Backbone.sync. Returns a xhr object if validation is successful and false otherwise. The attributes hash (as in set) should contain the attributes you'd like to change — keys that aren't mentioned won't be altered — but, a _complete representation_ of the resource will be sent to the server. As with `set`, you may pass individual keys and values instead of a hash. If the model has a validate method, and validation fails, the model will not be saved. If the model `isNew`, the save will be a "create" (HTTP POST), if the model already exists on the server, the save will be an "update" (HTTP PUT).
+Save a model to your database (or alternative persistence layer), by delegating to [ampersand-sync](https://github.com/ampersandjs/ampersand-sync). Returns a xhr object if validation is successful and false otherwise. The attributes hash (as in set) should contain the attributes you'd like to change — keys that aren't mentioned won't be altered — but, a *complete representation* of the resource will be sent to the server. As with `set`, you may pass individual keys and values instead of a hash. If the model has a validate method, and validation fails, the model will not be saved. If the model `isNew`, the save will be a "create" (HTTP POST), if the model already exists on the server, the save will be an "update" (HTTP PUT).
 
 If instead, you'd only like the changed attributes to be sent to the server, call `model.save(attrs, {patch: true})`. You'll get an HTTP PATCH request to the server with just the passed-in attributes.
 
@@ -241,69 +212,52 @@ task.destroy({
 
 ### sync `model.sync(method, model, [options])`
 
-Uses ampersand-sync to persist the state of a model to the server. Can be overrideen for custom behaviour.
-
-### remove
+Uses ampersand-sync to persist the state of a model to the server. Usually you won't call this directly, you'd use `save` or `destroy` instead, but it can be overriden for custom behaviour.
 
 ### isNew `model.isNew()`
 
-Has this model been saved to the server yet? If the model does not yet have an id, it is considered to be new.
+Has this model been saved to the server yet? If the model does not yet have an id (using `getId()`), it is considered to be new.
 
-### url `model.url()`
+### url `model.url` or `model.url()`
+
+The relative url the model should use to edit the resource on the server. 
 
 ### urlRoot `model.urlRoot or model.urlRoot()`
 
-### escape
+The base url to use for fetching this model. This is useful if the model is *not* in a collection and you still want to set a fixed "root" but have a dynamic model.url(). Can also be a function.
+
+If your model is in a collection that has a `url` you won't need this, because the model will try to build the URL from its collection.
+
+```js
+var Person = AmpersandModel.extend({
+    props: {
+        id: 'string',
+        name: 'string'
+    },
+    urlRoot: '/api/persons'
+});
+
+var bob = new Person({id: "1234"});
+
+console.log(bob.url()); //=> "/api/persons/1234"
+```
+
+### escape `model.escape()`
 
 Similar to `get`, but returns the HTML-escaped version of a model's attribute. If you're interpolating data from the model into HTML, using **escape** to retrieve attributes will help prevent XSS attacks.
 
 ```
-var hacker = new Backbone.Model({
-  name: "<script>alert('xss')</script>"
+var hacker = new PersonModel({
+    name: "<script>alert('xss')</script>"
 });
 
-alert(hacker.escape('name'));
+document.body.innerHTML = hacker.escape('name');
 ```
-
-### addListVal
-
-### removeListval
-
-### hasListVal
-
 
 ### isValid `model.isValid()`
 
-Check if the model is currently in a valid state, as per the `props`/`session` definitions.
-
-<!-- starthide -->
-
-## Authors
-
-Created by [@HenrikJoreteg](http://twitter.com/henrikjoreteg) with contributions from:
-
-- [@beausorensen](http://twitter.com/beausorensen)
-- [@LanceStout](https://twitter.com/lancestout)
-- [@philip_roberts](https://twitter.com/philip_roberts)
-- [@svenlito](https://twitter.com/svenlito)
-
-
-## Changelog
-
- - 2.6.0 - Cached, derived properties only fire change events now if new derived value is different from cache, instead of blindly firing change events if dependent properties changed.
- - 2.5.0 - UMD support by @swenlito
- - 2.4.0 - Added `toggle` method for boolean properties and properties with `values`
- - 2.3.0 - Added `values` to property definition
- - 2.2.0 - Added test parameter to property definitions
- - 2.1.0 - Added allowNull parameter to property definitions
- - 2.0.0 - Minor, but incompatible fix that remove `toServer` getter in lieu of adding `serialize` method that can be overridden.
- - 1.4.0 - Find/fix performance bottleneck. Significantly faster to instantiate larger numbers of models now.
- - 1.3.0 - Fix bug where session props were included in `.save()`
- - 1.2.0 - Make it possible to overwrite or extend data types.
- - 1.0.0 - Switching from `extend()` to `define()` pattern for building a model definition.
+Check if the model is currently in a valid state, it does this by calling the `validate` method, of your model if you've provided one.
 
 ## License
 
 MIT
-
-<!-- endhide -->

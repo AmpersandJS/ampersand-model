@@ -1,11 +1,8 @@
 var test = require('tape');
 var Model = require('../ampersand-model');
-var AmpersandRegistry = require('ampersand-registry');
 
 
 function getModel() {
-    var registry = new AmpersandRegistry();
-
     return Model.extend({
         modelType: 'foo',
         props: {
@@ -34,59 +31,9 @@ function getModel() {
         },
         session: {
             active: ['boolean', true, true]
-        },
-        // add a reference to the registry
-        registry: registry
+        }
     });
 }
-
-test('should have list method helpers', function (t) {
-    var Foo = getModel();
-    var foo = new Foo({
-        hash: [1, 2, 'a', 'b']
-    });
-    t.ok(foo.hasListVal('hash', 2));
-
-    foo.removeListVal('hash', 1);
-    t.deepEqual([2, 'a', 'b'], foo.hash);
-
-    foo.addListVal('hash', 10);
-    t.deepEqual([2, 'a', 'b', 10], foo.hash);
-    t.end();
-});
-
-test('should fire a remove event', function (t) {
-    var Foo = getModel();
-    var foo = new Foo({firstName: 'hi'});
-    foo.on('remove', function () {
-        t.pass('remove event fired');
-        t.end();
-    });
-    foo.remove();
-});
-
-test('should remove all event bindings after remove', function (t) {
-    var Foo = getModel();
-    var foo = new Foo({thing: 'meow'});
-    foo.on('change', function () {
-        t.fail();
-    });
-    foo.remove();
-    foo.thing = 'cow';
-    t.end();
-});
-
-test('should remove from registry on remove', function (t) {
-    var Foo = getModel();
-    var foo = new Foo({id: 20, lastName: 'hi'});
-    foo.remove();
-    var found = foo.registry.lookup('foo', 20);
-    t.ok(!found);
-    // make a new one
-    var bar = new Foo({id: 20});
-    t.strictEqual(bar.lastName, '');
-    t.end();
-});
 
 test('custom id and namespace attributes', function (t) {
     var NewPerson = Model.extend({
@@ -119,23 +66,6 @@ test('customizable `type` attribute', function (t) {
     t.end();
 });
 
-test('should store models in the registry', function (t) {
-    var Foo = getModel();
-    var foo = new Foo({
-        id: 1,
-        firstName: 'roger',
-        thing: 'meow'
-    });
-    var blah = foo.registry.lookup('foo', 1);
-    t.strictEqual(foo.firstName, blah.firstName);
-    t.strictEqual(foo, blah);
-    foo.on('change', function () {
-        t.ok(true);
-    });
-    blah.firstName = 'blah';
-    t.end();
-});
-
 test('constructor should be defined', function (t) {
     var Foo = Model.extend({
         props: { name: 'string' }
@@ -143,5 +73,22 @@ test('constructor should be defined', function (t) {
     var foo = new Foo();
 
     t.ok(foo.constructor);
+    t.end();
+});
+
+test('isValid is a thing', function (t) {
+    var Foo = Model.extend({
+        props: { name: ['string', true] },
+        validate: function (attrs) {
+            if (attrs.name.length < 2) {
+                return "can't be too short";
+            }
+        }
+    });
+
+    var foo = new Foo();
+    t.notOk(foo.isValid());
+    foo.name = 'thing';
+    t.ok(foo.isValid());
     t.end();
 });
