@@ -32,3 +32,4 @@ test("url when using urlRoot as a function to determine urlRoot at runtime", fun
     t.equal(model.url(), '/nested/1/collection/2');
     t.end();
 });
+

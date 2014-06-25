@@ -33,7 +33,7 @@
   },
   "scripts": {
     "start": "run-browser test/index.js",
-    "test": "browserify test/index.js | tape-run"
+    "test": "browserify test/*.js | tape-run"
   },
   "testling": {
     "files": "test/index.js",

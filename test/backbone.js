@@ -28,13 +28,6 @@ function module(moduleName, opts) {
     test.skip = tape.skip;
 }
 
-//Stub out sync for now since it needs window
-var proxyquire = require('proxyquire');
-proxyquire('../ampersand-model', {
-    'ampersand-sync': {
-        '@noCallThru': true
-    }
-});
 var AmpersandModel = require('../ampersand-model');
 //Let's fake some backbone things to minimize test changes
 var env = {};
