@@ -3,46 +3,7 @@ var _ = require('underscore');
 var sync = require('ampersand-sync');
 
 
-function Model(attrs, options) {
-    options || (options = {});
-    this.cid = _.uniqueId('model');
-    // grab collection/registry if passed in
-    _.extend(this, _.pick(options, attributeOptions));
-    BaseState.call(this, attrs, options);
-    if (attrs && attrs[this.idAttribute] && this.registry) _.result(this, 'registry').store(this);
-}
-
-var attributeOptions = ['collection', 'registry'];
-var BaseState = State.extend({});
-
-Model.prototype = Object.create(BaseState.prototype);
-
-// Set up all inheritable properties and methods.
-_.extend(Model.prototype, {
-    idAttribute: 'id',
-
-    namespaceAttribute: 'namespace',
-
-    typeAttribute: 'modelType',
-
-    // Get ID of model per configuration.
-    // Should *always* be how ID is determined by other code.
-    getId: function () {
-        return this[this.idAttribute];
-    },
-
-    // Get namespace of model per configuration.
-    // Should *always* be how namespace is determined by other code.
-    getNamespace: function () {
-        return this[this.namespaceAttribute];
-    },
-
-    // Get type of model per configuration.
-    // Should *always* be how type is determined by other code.
-    getType: function () {
-        return this[this.typeAttribute];
-    },
-
+var Model = State.extend({
     save: function (key, val, options) {
         var attrs, method, xhr, attributes = this.attributes;
 
@@ -143,21 +104,6 @@ _.extend(Model.prototype, {
         return sync.apply(this, arguments);
     },
 
-    // Remove model from the registry and unbind events
-    remove: function () {
-        if (this.getId() && this.registry) {
-            _.result(this, 'registry').remove(this.getType(), this.getId(), this.getNamespace());
-        }
-        this.trigger('remove', this);
-        this.off();
-        return this;
-    },
-
-    // A model is new if it has never been saved to the server, and lacks an id.
-    isNew: function () {
-        return this.getId() == null;
-    },
-
     // Default URL for the model's representation on the server -- if you're
     // using Backbone's restful methods, override this to change the endpoint
     // that will be called.
@@ -165,41 +111,8 @@ _.extend(Model.prototype, {
         var base = _.result(this, 'urlRoot') || _.result(this.collection, 'url') || urlError();
         if (this.isNew()) return base;
         return base + (base.charAt(base.length - 1) === '/' ? '' : '/') + encodeURIComponent(this.getId());
-    },
-
-    // get HTML-escaped value of attribute
-    escape: function (attr) {
-        return _.escape(this.get(attr));
-    },
-
-    // convenience methods for manipulating array properties
-    addListVal: function (prop, value, prepend) {
-        var list = _.clone(this[prop]) || [];
-        if (!_(list).contains(value)) {
-            list[prepend ? 'unshift' : 'push'](value);
-            this[prop] = list;
-        }
-        return this;
-    },
-
-    removeListVal: function (prop, value) {
-        var list = _.clone(this[prop]) || [];
-        if (_(list).contains(value)) {
-            this[prop] = _(list).without(value);
-        }
-        return this;
-    },
-
-    hasListVal: function (prop, value) {
-        return _.contains(this[prop] || [], value);
-    },
-
-    // Check if the model is currently in a valid state.
-    isValid: function (options) {
-        return this._validate({}, _.extend(options || {}, { validate: true }));
     }
 });
-
 
 // Throw an error when a URL is needed, and none is supplied.
 var urlError = function () {
@@ -215,6 +128,4 @@ var wrapError = function (model, options) {
     };
 };
 
-Model.dataTypes = BaseState.dataTypes;
-Model.extend = BaseState.extend;
 module.exports = Model;

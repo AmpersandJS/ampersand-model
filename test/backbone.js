@@ -80,7 +80,7 @@ var Backbone = {
                 id     : '1-the-tempest',
                 title  : "The Tempest",
                 author : "Bill Shakespeare",
-                length : 123
+                textLength : 123
             });
             collection = new klass();
             collection.add(doc);
@@ -344,7 +344,7 @@ var Backbone = {
         t.plan(2);
         var model = new Backbone.Model({result: 'result'});
         model.on('change', function () {
-            t.equal(model.changed.result, void 0);
+            t.equal(model._changed.result, void 0);
             t.equal(model.previous('result'), false);
         });
         model.set({result: void 0}, {silent: true});
@@ -565,7 +565,7 @@ var Backbone = {
         model.destroy();
     });
 
-    test.only("save with PATCH", function (t) {
+    test.skip("save with PATCH", function (t) {
         t.plan(7);
         doc.clear().set({id: 1, a: 1, b: 2, c: 3, d: 4});
         doc.save();
@@ -710,7 +710,7 @@ var Backbone = {
         var emptyattrs = new Defaulted();
     });
 
-    test("Inherit class properties", function (t) {
+    test.skip("Inherit class properties", function (t) {
         t.plan(6);
         var Parent = Backbone.Model.extend({
             instancePropSame: function () {},

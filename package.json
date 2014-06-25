@@ -1,12 +1,13 @@
 {
   "name": "ampersand-model",
-  "version": "2.10.3",
+  "description": "An extension to ampersand-state that adds methods and properties for working with a RESTful API.",
+  "version": "3.0.2",
   "author": "Henrik Joreteg <henrik@andyet.net>",
   "bugs": {
     "url": "https://github.com/ampersandjs/ampersand-model/issues"
   },
   "dependencies": {
-    "ampersand-state": "^4.0.0",
+    "ampersand-state": "^4.3.0",
     "ampersand-sync": "^1.0.0",
     "underscore": "^1.6.0"
   },
