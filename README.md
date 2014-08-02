@@ -135,7 +135,41 @@ task.destroy({
 
 Uses ampersand-sync to persist the state of a model to the server. Usually you won't call this directly, you'd use `save` or `destroy` instead, but it can be overriden for custom behaviour.
 
-### url `model.url` or `model.url()`
+### ajaxConfig `model.ajaxConfig or model.ajaxConfig()`
+
+ampersand-sync will call ajaxConfig on your model before it makes the request to the server, and will merge in any options you return to the request. When extending your own model, set an ajaxConfig function to modify the request before it goes to the server.
+
+ajaxConfig can either be an object, or a function that returns an object, with the following options:
+
+* `useXDR` [boolean]: (applies to IE8/9 only with cross domain requests): signifies that this is a cross-domain request and that IE should use it's XDomainRequest object. This is required if you're making cross-domain requests and want to support IE8/9). Note that XDR doesn't support headers/withCredentials.
+* `headers` [object]: any extra headers to send with the request.
+* `xhrFields` [object]: any fields to set directly on the [XHR](https://developer.mozilla.org/en/docs/Web/API/XMLHttpRequest) request object, most typically:
+    * `withCredentials` [boolean]: whether to send cross domain requests with authorization headers/cookies. Useful if you're making cross sub-domain requests with a root-domain auth cookie.
+* `beforeSend` [function]: beforeSend will be called before the request is made, and will be passed the raw `xhr` object if you wish to modify it directly before it's sent.
+
+```javascript
+var MyCollection = AmpersandModel.extend({
+    url: 'http://otherdomain.example.com/stuff',
+
+    ajaxConfig: function () {
+        return {
+            headers: {
+                'Access-Token': this.accessToken
+            },
+            xhrFields: {
+                'withCredentials: true
+            }
+        };
+    }
+});
+
+var collection = new MyCollection()
+collection.fetch();
+
+Configuring
+
+
+### url `model.url or model.url()`
 
 The relative url the model should use to edit the resource on the server. 
 
