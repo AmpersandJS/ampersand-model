@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "ampersand-state": "^4.3.2",
-    "ampersand-sync": "^1.0.0",
+    "ampersand-sync": "^2.0.0",
     "underscore": "^1.6.0"
   },
   "devDependencies": {
