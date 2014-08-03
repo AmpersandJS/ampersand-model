@@ -157,7 +157,7 @@ var MyCollection = AmpersandModel.extend({
                 'Access-Token': this.accessToken
             },
             xhrFields: {
-                'withCredentials: true
+                'withCredentials': true
             }
         };
     }
@@ -165,8 +165,9 @@ var MyCollection = AmpersandModel.extend({
 
 var collection = new MyCollection()
 collection.fetch();
+```
 
-Configuring
+# Configuring
 
 
 ### url `model.url or model.url()`
