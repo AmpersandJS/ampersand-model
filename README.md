@@ -65,7 +65,7 @@ As with AmpersandState, if you have defined an **initialize** function for your 
 
 ```javascript
 var me = new Person({
-    firstName: 'Phil'
+    firstName: 'Phil',
     lastName: 'Roberts'
 });
 
@@ -124,10 +124,14 @@ Triggers:
 Pass `{wait: true}` if you'd like to wait for the server to respond before removing the model from the collection.
 
 ```javascript
-var task = new Task({ id: 123 });
+var task = new Task({id: 123});
 task.destroy({
-    success: function () { alert('Task destroyed!'); },
-    error: function () { alert('There was an error destroying the task'); },
+    success: function () {
+        alert('Task destroyed!');
+    },
+    error: function () {
+        alert('There was an error destroying the task');
+    },
 });
 ```
 
