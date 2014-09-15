@@ -152,8 +152,8 @@ ajaxConfig can either be an object, or a function that returns an object, with t
 * `beforeSend` [function]: beforeSend will be called before the request is made, and will be passed the raw `xhr` object if you wish to modify it directly before it's sent.
 
 ```javascript
-var MyCollection = AmpersandModel.extend({
-    url: 'http://otherdomain.example.com/stuff',
+var Person = AmpersandModel.extend({
+    urlRoot: 'http://otherdomain.example.com/people',
 
     ajaxConfig: function () {
         return {
@@ -167,8 +167,8 @@ var MyCollection = AmpersandModel.extend({
     }
 });
 
-var collection = new MyCollection()
-collection.fetch();
+var me = new Person({ id: 123 });
+me.fetch();
 ```
 
 # Configuring
