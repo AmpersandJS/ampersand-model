@@ -1,3 +1,4 @@
+/*$AMPERSAND_VERSION*/
 var State = require('ampersand-state');
 var _ = require('underscore');
 var sync = require('ampersand-sync');
