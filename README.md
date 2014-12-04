@@ -26,7 +26,7 @@ For more, [read all about how events work in ampersand](http://ampersandjs.com/l
 
 ## API Reference
 
-The module exports just one item, the ampersand-model constructor. It's has a method called `extend` that works as follows:
+The module exports just one item, the ampersand-model constructor. It has a method called `extend` that works as follows:
 
 ### extend `AmpersandModel.extend({ })`
 
@@ -145,7 +145,7 @@ ampersand-sync will call ajaxConfig on your model before it makes the request to
 
 ajaxConfig can either be an object, or a function that returns an object, with the following options:
 
-* `useXDR` [boolean]: (applies to IE9 only with cross domain requests): signifies that this is a cross-domain request and that IE should use it's XDomainRequest object. This is required if you're making cross-domain requests and want to support IE9). Note that XDR doesn't support headers/withCredentials.
+* `useXDR` [boolean]: (applies to IE9 only with cross domain requests): signifies that this is a cross-domain request and that IE should use its XDomainRequest object. This is required if you're making cross-domain requests and want to support IE9). Note that XDR doesn't support headers/withCredentials.
 * `headers` [object]: any extra headers to send with the request.
 * `xhrFields` [object]: any fields to set directly on the [XHR](https://developer.mozilla.org/en/docs/Web/API/XMLHttpRequest) request object, most typically:
     * `withCredentials` [boolean]: whether to send cross domain requests with authorization headers/cookies. Useful if you're making cross sub-domain requests with a root-domain auth cookie.
