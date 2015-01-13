@@ -7,22 +7,19 @@
     "url": "https://github.com/ampersandjs/ampersand-model/issues"
   },
   "dependencies": {
-    "ampersand-state": "^4.3.2",
+    "ampersand-state": "^4.4.4",
     "ampersand-sync": "^2.0.4",
     "ampersand-version": "^1.0.0",
     "underscore": "^1.7.0"
   },
   "devDependencies": {
-    "ampersand-registry": "0.x.x",
-    "browserify": "^6.3.2",
-    "phantomjs": "^1.9.12",
+    "browserify": "^8.1.0",
+    "phantomjs": "^1.9.13",
     "precommit-hook": "*",
-    "proxyquire": "^1.0.0",
-    "run-browser": "^1.3.1",
-    "tap-spec": "^1.0.1",
+    "run-browser": "^2.0.1",
+    "tap-spec": "^2.1.2",
     "tape": "^3.0.3",
-    "tape-run": "^0.3.0",
-    "uglify-js": "^2.4.15"
+    "tape-run": "^0.3.0"
   },
   "homepage": "https://github.com/ampersandjs/ampersand-model",
   "keywords": [
