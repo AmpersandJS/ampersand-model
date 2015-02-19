@@ -10,7 +10,7 @@
     "ampersand-state": "^4.4.4",
     "ampersand-sync": "^2.0.4",
     "ampersand-version": "^1.0.0",
-    "underscore": "^1.7.0"
+    "underscore": "^1.6.0"
   },
   "devDependencies": {
     "browserify": "^8.1.0",
