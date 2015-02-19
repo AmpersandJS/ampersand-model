@@ -1,7 +1,7 @@
 {
   "name": "ampersand-model",
   "description": "An extension to ampersand-state that adds methods and properties for working with a RESTful API.",
-  "version": "4.0.1",
+  "version": "4.0.3",
   "author": "Henrik Joreteg <henrik@andyet.net>",
   "bugs": {
     "url": "https://github.com/ampersandjs/ampersand-model/issues"
@@ -9,14 +9,17 @@
   "dependencies": {
     "ampersand-state": "^4.3.2",
     "ampersand-sync": "^2.0.0",
-    "underscore": "^1.6.0"
+    "underscore": "^1.6.0",
+    "ampersand-version": "^1.0.0"
   },
   "devDependencies": {
     "ampersand-registry": "0.x.x",
     "browserify": "~3.39.0",
+    "phantomjs": "^1.9.7-15",
     "precommit-hook": "*",
     "proxyquire": "^1.0.0",
     "run-browser": "~1.3.0",
+    "tap-spec": "^0.2.1",
     "tape": "~2.12.3",
     "tape-run": "~0.1.1",
     "uglify-js": "2.4.0"
@@ -33,7 +36,7 @@
   },
   "scripts": {
     "start": "run-browser test/*.js",
-    "test": "browserify test/*.js | tape-run"
+    "test": "browserify test/*.js | tape-run | tap-spec"
   },
   "testling": {
     "files": "test/index.js",
@@ -49,6 +52,11 @@
       "ipad/6.0..latest",
       "iphone/6.0..latest",
       "android-browser/4.2..latest"
+    ]
+  },
+  "browserify": {
+    "transform": [
+      "ampersand-version"
     ]
   }
 }

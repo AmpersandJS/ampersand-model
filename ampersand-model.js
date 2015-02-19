@@ -1,3 +1,4 @@
+/*$AMPERSAND_VERSION*/
 var State = require('ampersand-state');
 var _ = require('underscore');
 var sync = require('ampersand-sync');
@@ -5,7 +6,7 @@ var sync = require('ampersand-sync');
 
 var Model = State.extend({
     save: function (key, val, options) {
-        var attrs, method, xhr, attributes = this.attributes;
+        var attrs, method, sync, attributes = this.attributes;
 
         // Handle both `"key", value` and `{key: value}` -style arguments.
         if (key == null || typeof key === 'object') {
@@ -47,9 +48,9 @@ var Model = State.extend({
         // if we're waiting we haven't actually set our attributes yet so
         // we need to do make sure we send right data
         if (options.wait) options.attrs = _.extend(model.serialize(), attrs);
-        xhr = this.sync(method, this, options);
+        sync = this.sync(method, this, options);
 
-        return xhr;
+        return sync;
     },
 
     // Fetch the model from the server. If the server's representation of the
@@ -93,9 +94,9 @@ var Model = State.extend({
         }
         wrapError(this, options);
 
-        var xhr = this.sync('delete', this, options);
+        var sync = this.sync('delete', this, options);
         if (!options.wait) destroy();
-        return xhr;
+        return sync;
     },
 
     // Proxy `ampersand-sync` by default -- but override this if you need
