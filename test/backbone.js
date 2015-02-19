@@ -544,18 +544,18 @@ var Backbone = {
         t.ok(_.isEqual(env.syncArgs.model, doc));
     });
 
-    test("save, fetch, destroy triggers error event when an error occurs", function (t) {
-        t.plan(3);
+    test("save, fetch, destroy triggers error event, calls error handler, both with proper args, when an error occurs", function (t) {
+        t.plan(6);
         var model = new Backbone.Model();
-        model.on('error', function () {
-            t.ok(true);
+        model.on('error', function (model, resp) {
+            t.equal(resp, 'xhrError');
         });
         model.sync = function (method, model, options) {
-            options.error();
+            options.error(model, 'xhrError');
         };
-        model.save({data: 2, id: 1});
-        model.fetch();
-        model.destroy();
+        model.save( {data: 2, id: 1}, {error: function (model, resp) { t.equal(resp, 'xhrError'); } });
+        model.fetch( {error: function (model, resp) { t.equal(resp, 'xhrError'); } });
+        model.destroy( {error: function (model, resp) { t.equal(resp, 'xhrError'); } });
     });
 
     test.skip("save with PATCH", function (t) {

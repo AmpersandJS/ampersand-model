@@ -32,7 +32,7 @@
     "url": "https://github.com/ampersandjs/ampersand-model.git"
   },
   "scripts": {
-    "start": "run-browser test/index.js",
+    "start": "run-browser test/*.js",
     "test": "browserify test/*.js | tape-run"
   },
   "testling": {
