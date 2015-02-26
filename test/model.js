@@ -349,6 +349,20 @@ $(document).ready(function() {
     model.save();
   });
 
+  test("#38 - Model wrapError model arg is descoped by options.error argument", function() {
+    t.plan(1);
+    var Model = AmpersandModel.extend({
+      sync: function(method, model, options) {
+        //simulating ampersand-sync error
+        options.error('response', 'error', 'message');
+      }
+    });
+
+    new Model()
+      .on('error', function() { ok(true); })
+      .save();
+  });
+
   asyncTest("#1478 - Model `save` does not trigger change on unchanged attributes", 0, function() {
     var Model = AmpersandModel.extend({
       props: {

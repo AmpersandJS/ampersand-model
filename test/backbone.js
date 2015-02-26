@@ -551,7 +551,7 @@ var Backbone = {
             t.equal(resp, 'xhrError');
         });
         model.sync = function (method, model, options) {
-            options.error(model, 'xhrError');
+            options.error('xhrError');
         };
         model.save( {data: 2, id: 1}, {error: function (model, resp) { t.equal(resp, 'xhrError'); } });
         model.fetch( {error: function (model, resp) { t.equal(resp, 'xhrError'); } });
