@@ -81,9 +81,9 @@ Available options:
 
 ### save `model.save([attributes], [options])`
 
-Save a model to your database (or alternative persistence layer), by delegating to [ampersand-sync](https://github.com/ampersandjs/ampersand-sync). Returns a xhr object if validation is successful and false otherwise. The attributes hash (as in set) should contain the attributes you'd like to change — keys that aren't mentioned won't be altered — but, a *complete representation* of the resource will be sent to the server. As with `set`, you may pass individual keys and values instead of a hash. If the model has a validate method, and validation fails, the model will not be saved. If the model `isNew`, the save will be a "create" (HTTP POST), if the model already exists on the server, the save will be an "update" (HTTP PUT).
+Save a model to your database (or alternative persistence layer) by delegating to to [ampersand-sync](https://github.com/ampersandjs/ampersand-sync). Returns a [xhr](https://github.com/Raynos/xhr) object if validation is successful and false otherwise. The attributes hash (as in [set](https://github.com/AmpersandJS/ampersand-state/blob/master/README.md#set-statesetattributes-options-statefirstname--henrik)) should contain the attributes you'd like to change — keys that aren't mentioned won't be altered — but, a *complete representation* of the resource will be sent to the server. As with `set`, you may pass individual keys and values instead of a hash. If the model has a validate method, and validation fails, the model will not be saved. If the model `isNew`, the save will be a "create" (HTTP POST).  If the model already exists on the server, the save will be an "update" (HTTP PUT).
 
-If instead, you'd only like the changed attributes to be sent to the server, call `model.save(attrs, {patch: true})`. You'll get an HTTP PATCH request to the server with just the passed-in attributes.
+If you only want the changed attributes to be sent to the server, call `model.save(attrs, {patch: true})`. You'll get an HTTP PATCH request to the server with just the passed-in attributes.
 
 Calling save with new attributes will cause a `"change"` event immediately, a `"request"` event as the Ajax request begins to go to the server, and a `"sync"` event after the server has acknowledged the successful change. Pass `{wait: true}` if you'd like to wait for the server before setting the new attributes on the model.
 
@@ -104,7 +104,7 @@ book.save({author: "Teddy"});
 
 ### fetch `model.fetch([options])`
 
-Resets the model's state from the server by delegating to ampersand-sync. Returns a xhr. Useful if the model has yet to be populated with data, or you want to ensure you have the latest server state. A `"change"` event will be triggered if the retrieved state from the server differs from the current attributes. Accepts `success` and `error` callbacks in the options hash, which are both passed `(model, response, options)` as arguments.
+Resets the model's state from the server by delegating a GET to ampersand-sync. Returns a xhr. Useful if the model has yet to be populated with data, or you want to ensure you have the latest server state. A `"change"` event will be triggered if the retrieved state from the server differs from the current attributes. Accepts `success` and `error` callbacks in the options hash, which are both passed `(model, response, options)` as arguments.
 
 ```javascript
 var me = new Person({id: 123});
@@ -113,7 +113,7 @@ me.fetch();
 
 ### destroy `model.destroy([options])`
 
-Destroys the model on the server by delegating an HTTP `DELETE` request to ampersand-sync. Returns the xhr object, or `false` if the model [isNew](#ampersand-model-isnew). Accepts `success` and `error` callbacks in the options hash, which are both passed `(model, response, options)` as arguments.
+Destroys the model on the server by delegating a HTTP `DELETE` request to ampersand-sync. Returns the xhr object, or `false` if the model [isNew](#ampersand-model-isnew). Accepts `success` and `error` callbacks in the options hash, which are both passed `(model, response, options)` as arguments.
 
 Triggers:
 
@@ -138,6 +138,9 @@ task.destroy({
 ### sync `model.sync(method, model, [options])`
 
 Uses ampersand-sync to persist the state of a model to the server. Usually you won't call this directly, you'd use `save` or `destroy` instead, but it can be overriden for custom behaviour.
+
+
+# Configuring
 
 ### ajaxConfig `model.ajaxConfig or model.ajaxConfig()`
 
@@ -171,12 +174,31 @@ var me = new Person({ id: 123 });
 me.fetch();
 ```
 
-# Configuring
-
-
 ### url `model.url or model.url()`
 
-The relative url the model should use to edit the resource on the server. 
+The relative url that the model should use to edit the resource on the server.  By default, `url` is constructed by sniffing for the model's `urlRoot` or the model's collection `url`, if present, then appending the `idAttribute` if the model has not yet been saved.  However, if the model does not follow normal REST endpoint conventions, you may overwrite it.  In such a case, `url` may be absolute.
+
+```js
+// overwrite `url()` example
+var Person = AmpersandModel.extend({
+    props: {
+        id: 'number',
+        name: 'string'
+    },
+    url: function() {
+        var base = _.result(this, "urlRoot");
+        if (this.isNew()) return base;
+        return base + '/' + someCustomActionOnServerId(this.getId());
+    },
+    urlRoot: function() {
+        return '/api/' + me.apiVersion + '/persons';
+    }
+});
+
+var bob = new Person({id: 1234, name: 'bob'});
+console.log(bob.urlRoot()); //=> /api/v1/persons
+console.log(bob.url()); //=> /api/v1/persons/some/CustomId-bob-1234
+```
 
 ### urlRoot `model.urlRoot or model.urlRoot()`
 
