@@ -176,7 +176,7 @@ me.fetch();
 
 ### url `model.url or model.url()`
 
-The relative url that the model should use to edit the resource on the server.  By default, `url` is constructed by sniffing for the model's `urlRoot` or the model's collection's `url`, if present, then appending the `idAttribute` if the model has not yet been saved.  However, if the model does not follow normal REST endpoint conventions, you may overwrite it.  In such a case, `url` may be absolute.
+The relative url that the model should use to edit the resource on the server.  By default, `url` is constructed by sniffing for the model's `urlRoot` or the model's collection `url`, if present, then appending the `idAttribute` if the model has not yet been saved.  However, if the model does not follow normal REST endpoint conventions, you may overwrite it.  In such a case, `url` may be absolute.
 
 ```js
 // overwrite `url()` example
