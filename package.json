@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "ampersand-state": "^4.4.4",
-    "ampersand-sync": "^2.0.4",
+    "ampersand-sync": "^3.0.3",
     "ampersand-version": "^1.0.0",
     "underscore": "^1.6.0"
   },
