@@ -1,7 +1,10 @@
 /*$AMPERSAND_VERSION*/
 var State = require('ampersand-state');
-var _ = require('underscore');
 var sync = require('ampersand-sync');
+var assign = require('lodash.assign');
+var isObject = require('lodash.isobject');
+var clone = require('lodash.clone');
+var result = require('lodash.result');
 
 
 var Model = State.extend({
@@ -16,7 +19,7 @@ var Model = State.extend({
             (attrs = {})[key] = val;
         }
 
-        options = _.extend({validate: true}, options);
+        options = assign({validate: true}, options);
 
         // If we're not waiting and attributes exist, save acts as
         // `set(attr).save(null, opts)` with validation. Otherwise, check if
@@ -34,8 +37,8 @@ var Model = State.extend({
         var success = options.success;
         options.success = function (resp) {
             var serverAttrs = model.parse(resp, options);
-            if (options.wait) serverAttrs = _.extend(attrs || {}, serverAttrs);
-            if (_.isObject(serverAttrs) && !model.set(serverAttrs, options)) {
+            if (options.wait) serverAttrs = assign(attrs || {}, serverAttrs);
+            if (isObject(serverAttrs) && !model.set(serverAttrs, options)) {
                 return false;
             }
             if (success) success(model, resp, options);
@@ -47,7 +50,7 @@ var Model = State.extend({
         if (method === 'patch') options.attrs = attrs;
         // if we're waiting we haven't actually set our attributes yet so
         // we need to do make sure we send right data
-        if (options.wait) options.attrs = _.extend(model.serialize(), attrs);
+        if (options.wait) options.attrs = assign(model.serialize(), attrs);
         sync = this.sync(method, this, options);
 
         return sync;
@@ -57,7 +60,7 @@ var Model = State.extend({
     // model differs from its current attributes, they will be overridden,
     // triggering a `"change"` event.
     fetch: function (options) {
-        options = options ? _.clone(options) : {};
+        options = options ? clone(options) : {};
         if (options.parse === void 0) options.parse = true;
         var model = this;
         var success = options.success;
@@ -74,7 +77,7 @@ var Model = State.extend({
     // Optimistically removes the model from its collection, if it has one.
     // If `wait: true` is passed, waits for the server to respond before removal.
     destroy: function (options) {
-        options = options ? _.clone(options) : {};
+        options = options ? clone(options) : {};
         var model = this;
         var success = options.success;
 
@@ -109,7 +112,7 @@ var Model = State.extend({
     // using Backbone's restful methods, override this to change the endpoint
     // that will be called.
     url: function () {
-        var base = _.result(this, 'urlRoot') || _.result(this.collection, 'url') || urlError();
+        var base = result(this, 'urlRoot') || result(this.collection, 'url') || urlError();
         if (this.isNew()) return base;
         return base + (base.charAt(base.length - 1) === '/' ? '' : '/') + encodeURIComponent(this.getId());
     }
