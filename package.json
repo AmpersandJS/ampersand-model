@@ -17,13 +17,13 @@
   },
   "devDependencies": {
     "browserify": "^8.1.0",
+    "lodash": "^3.6.0",
     "phantomjs": "^1.9.13",
     "precommit-hook": "*",
     "run-browser": "^2.0.1",
     "tap-spec": "^2.1.2",
     "tape": "^3.0.3",
-    "tape-run": "^0.3.0",
-    "underscore": "^1.8.2"
+    "tape-run": "^0.3.0"
   },
   "homepage": "https://github.com/ampersandjs/ampersand-model",
   "keywords": [
