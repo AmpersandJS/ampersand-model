@@ -1,5 +1,5 @@
 /* global console */
-var _ = require('underscore');
+var _ = require('lodash');
 
 var tape = require('tape');
 var test = tape;
