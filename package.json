@@ -1,7 +1,7 @@
 {
   "name": "ampersand-model",
   "description": "An extension to ampersand-state that adds methods and properties for working with a RESTful API.",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "author": "Henrik Joreteg <henrik@andyet.net>",
   "bugs": {
     "url": "https://github.com/ampersandjs/ampersand-model/issues"
@@ -10,10 +10,14 @@
     "ampersand-state": "^4.4.4",
     "ampersand-sync": "^3.0.3",
     "ampersand-version": "^1.0.0",
-    "underscore": "^1.6.0"
+    "lodash.assign": "^3.0.0",
+    "lodash.clone": "^3.0.1",
+    "lodash.isobject": "^3.0.1",
+    "lodash.result": "^3.0.0"
   },
   "devDependencies": {
     "browserify": "^8.1.0",
+    "lodash": "^3.6.0",
     "phantomjs": "^1.9.13",
     "precommit-hook": "*",
     "run-browser": "^2.0.1",
