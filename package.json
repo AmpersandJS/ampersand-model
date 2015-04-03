@@ -3,6 +3,9 @@
   "description": "An extension to ampersand-state that adds methods and properties for working with a RESTful API.",
   "version": "5.0.2",
   "author": "Henrik Joreteg <henrik@andyet.net>",
+  "files": [
+      "ampersand-model.js"
+  ],
   "bugs": {
     "url": "https://github.com/ampersandjs/ampersand-model/issues"
   },
