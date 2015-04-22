@@ -140,7 +140,7 @@ task.destroy({
 Uses ampersand-sync to persist the state of a model to the server. Usually you won't call this directly, you'd use `save` or `destroy` instead, but it can be overriden for custom behaviour.
 
 
-# Configuring
+## Configuring
 
 ### ajaxConfig `model.ajaxConfig or model.ajaxConfig()`
 
