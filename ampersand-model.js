@@ -23,7 +23,7 @@ var wrapError = function (model, options) {
 
 var Model = State.extend({
     save: function (key, val, options) {
-        var attrs, method, sync;
+        var attrs, method;
 
         // Handle both `"key", value` and `{key: value}` -style arguments.
         if (key == null || typeof key === 'object') {
@@ -65,8 +65,8 @@ var Model = State.extend({
         // if we're waiting we haven't actually set our attributes yet so
         // we need to do make sure we send right data
         if (options.wait) options.attrs = assign(model.serialize(), attrs);
-        sync = this.sync(method, this, options);
-
+        var sync = this.sync(method, this, options);
+        options.xhr = sync;
         return sync;
     },
 
@@ -84,7 +84,9 @@ var Model = State.extend({
             model.trigger('sync', model, resp, options);
         };
         wrapError(this, options);
-        return this.sync('read', this, options);
+        var sync = this.sync('read', this, options);
+        options.xhr = sync;
+        return sync;
     },
 
     // Destroy this model on the server if it was already persisted.
@@ -112,6 +114,7 @@ var Model = State.extend({
         wrapError(this, options);
 
         var sync = this.sync('delete', this, options);
+        options.xhr = sync;
         if (!options.wait) destroy();
         return sync;
     },
