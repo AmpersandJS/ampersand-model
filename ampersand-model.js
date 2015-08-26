@@ -23,7 +23,7 @@ var wrapError = function (model, options) {
 
 var Model = State.extend({
     save: function (key, val, options) {
-        var attrs, method, sync;
+        var attrs, method;
 
         // Handle both `"key", value` and `{key: value}` -style arguments.
         if (key == null || typeof key === 'object') {
@@ -65,8 +65,12 @@ var Model = State.extend({
         // if we're waiting we haven't actually set our attributes yet so
         // we need to do make sure we send right data
         if (options.wait) options.attrs = assign(model.serialize(), attrs);
-        sync = this.sync(method, this, options);
-
+        var sync = this.sync(method, this, options);
+        // Make the request available on the options object so it can be accessed
+        // further down the line by `parse`, attached listeners, etc
+        // Same thing is done below for fetch and destroy
+        // https://github.com/AmpersandJS/ampersand-collection-rest-mixin/commit/d32d788aaff912387eb1106f2d7ad183ec39e11a#diff-84c84703169bf5017b1bc323653acaa3R32
+        options.xhr = sync;
         return sync;
     },
 
@@ -84,7 +88,9 @@ var Model = State.extend({
             model.trigger('sync', model, resp, options);
         };
         wrapError(this, options);
-        return this.sync('read', this, options);
+        var sync = this.sync('read', this, options);
+        options.xhr = sync;
+        return sync;
     },
 
     // Destroy this model on the server if it was already persisted.
@@ -112,6 +118,7 @@ var Model = State.extend({
         wrapError(this, options);
 
         var sync = this.sync('delete', this, options);
+        options.xhr = sync;
         if (!options.wait) destroy();
         return sync;
     },
