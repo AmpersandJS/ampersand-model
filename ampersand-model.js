@@ -6,7 +6,6 @@ var isObject = require('lodash.isobject');
 var clone = require('lodash.clone');
 var result = require('lodash.result');
 
-
 // Throw an error when a URL is needed, and none is supplied.
 var urlError = function () {
     throw new Error('A "url" property or function must be specified');
@@ -64,8 +63,9 @@ var Model = State.extend({
         if (method === 'patch') options.attrs = attrs;
         // if we're waiting we haven't actually set our attributes yet so
         // we need to do make sure we send right data
-        if (options.wait) options.attrs = assign(model.serialize(), attrs);
+        if (options.wait && method !== 'patch') options.attrs = assign(model.serialize(), attrs);
         var sync = this.sync(method, this, options);
+
         // Make the request available on the options object so it can be accessed
         // further down the line by `parse`, attached listeners, etc
         // Same thing is done below for fetch and destroy

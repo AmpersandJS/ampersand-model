@@ -558,19 +558,21 @@ var Backbone = {
         model.destroy( {error: function (model, resp) { t.equal(resp, 'xhrError'); } });
     });
 
-    test.skip("save with PATCH", function (t) {
-        t.plan(7);
-        doc.clear().set({id: 1, a: 1, b: 2, c: 3, d: 4});
-        doc.save();
+    test("save with PATCH", function (t) {
+        t.plan(6);
+        var Model = Backbone.Model.extend();
+        var model = new Model({parent_id: 1});
+
+        model.clear().set({id: 1, a: 1, b: 2, c: 3, d: 4});
+        model.save();
         t.equal(env.syncArgs.method, 'update');
         t.equal(env.syncArgs.options.attrs, undefined);
 
-        doc.save({b: 2, d: 4}, {patch: true});
+        model.save({b: 2, d: 4}, {patch: true});
         t.equal(env.syncArgs.method, 'patch');
         t.equal(_.size(env.syncArgs.options.attrs), 2);
         t.equal(env.syncArgs.options.attrs.d, 4);
         t.equal(env.syncArgs.options.attrs.a, undefined);
-        t.equal(this.ajaxSettings.data, "{\"b\":2,\"d\":4}");
     });
 
     test.skip("save in positional style", function (t) {
@@ -856,6 +858,18 @@ var Backbone = {
         t.equal(model.get('a'), void 0);
     });
 
+    test("save with PATCH and `wait` only sends specified attributes", function (t) {
+        t.plan(4);
+        var Model = Backbone.Model.extend({id: 1});
+        var model = new Model({parent_id: 1});
+        model.set({a: 1, b: 2, d: 4, e: 5});
+        model.save({b: 2, d: 4}, {patch: true, wait: true });
+        t.equal(env.syncArgs.method, 'patch');
+        t.equal(_.size(env.syncArgs.options.attrs), 2);
+        t.equal(env.syncArgs.options.attrs.d, 4);
+        t.equal(env.syncArgs.options.attrs.a, undefined);
+    });
+
     test.skip("save doesn't validate twice", function (t) {
         t.plan(1);
         var model = new Backbone.Model();
@@ -897,7 +911,7 @@ var Backbone = {
         t.equal(changed, 1);
     });
 
-    test.skip("a failed `save` with `wait` doesn't leave attributes behind", function (t) {
+    test("a failed `save` with `wait` doesn't leave attributes behind", function (t) {
         t.plan(1);
         var model = new Backbone.Model();
         model.url = '/test';
@@ -905,7 +919,7 @@ var Backbone = {
         t.equal(model.get('x'), void 0);
     });
 
-    test.skip("#1030 - `save` with `wait` results in correct attributes if success is called during sync", function (t) {
+    test("#1030 - `save` with `wait` results in correct attributes if success is called during sync", function (t) {
         t.plan(2);
         var model = new Backbone.Model({x: 1, y: 2});
         model.sync = function (method, model, options) {
@@ -916,7 +930,7 @@ var Backbone = {
         t.equal(model.get('x'), 3);
     });
 
-    test.skip("save with wait validates attributes", function (t) {
+    test("save with wait validates attributes", function (t) {
         t.plan(1);
         var model = new Backbone.Model();
         model.url = '/test';
