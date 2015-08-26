@@ -12,7 +12,7 @@ var SuccessSync = function (method, model, options) {
     return Sync.call(this, method, model, options);
 };
 
-test("url when using urlRoot, and uri encoding", function(t) {
+test("url when using urlRoot, and uri encoding", function (t) {
     var Model = AmpersandModel.extend({
         props: {
             id: 'string'
@@ -26,13 +26,13 @@ test("url when using urlRoot, and uri encoding", function(t) {
     t.end();
 });
 
-test("url when using urlRoot as a function to determine urlRoot at runtime", function(t) {
+test("url when using urlRoot as a function to determine urlRoot at runtime", function (t) {
     var Model = AmpersandModel.extend({
         props: {
             id: 'number',
             parent_id: 'number'
         },
-        urlRoot: function() {
+        urlRoot: function () {
             return '/nested/' + this.get('parent_id') + '/collection';
         }
     });
