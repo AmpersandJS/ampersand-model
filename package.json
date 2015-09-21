@@ -10,13 +10,13 @@
     "url": "https://github.com/ampersandjs/ampersand-model/issues"
   },
   "dependencies": {
-    "ampersand-state": "^4.5.2",
-    "ampersand-sync": "^4.0.1",
+    "ampersand-state": "^4.6.0",
+    "ampersand-sync": "^4.0.2",
     "ampersand-version": "^1.0.2",
-    "lodash.assign": "^3.0.0",
-    "lodash.clone": "^3.0.1",
-    "lodash.isobject": "^3.0.1",
-    "lodash.result": "^3.0.0"
+    "lodash.assign": "^3.2.0",
+    "lodash.clone": "^3.0.3",
+    "lodash.isobject": "^3.0.2",
+    "lodash.result": "^3.1.2"
   },
   "devDependencies": {
     "browserify": "^8.1.0",
@@ -40,7 +40,9 @@
   },
   "scripts": {
     "start": "run-browser test/*.js",
-    "test": "browserify test/*.js | tape-run | tap-spec"
+    "test": "browserify test/*.js | tape-run | tap-spec",
+    "lint": "jshint .",
+    "validate": "npm ls"
   },
   "testling": {
     "files": "test/index.js",
@@ -62,5 +64,10 @@
     "transform": [
       "ampersand-version"
     ]
-  }
+  },
+  "pre-commit": [
+    "lint",
+    "validate",
+    "test"
+  ]
 }
