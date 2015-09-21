@@ -42,7 +42,11 @@
     "start": "run-browser test/*.js",
     "test": "browserify test/*.js | tape-run | tap-spec",
     "lint": "jshint .",
-    "validate": "npm ls"
+    "validate": "npm ls",
+    "preversion": "git checkout master && git pull && npm ls",
+    "publish-patch": "npm run preversion && npm version patch && git push origin master --tags && npm publish",
+    "publish-minor": "npm run preversion && npm version minor && git push origin master --tags && npm publish",
+    "publish-major": "npm run preversion && npm version major && git push origin master --tags && npm publish"
   },
   "testling": {
     "files": "test/index.js",
