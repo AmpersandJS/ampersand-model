@@ -113,7 +113,7 @@ me.fetch();
 
 ### destroy `model.destroy([options])`
 
-Destroys the model on the server by delegating a HTTP `DELETE` request to ampersand-sync. Returns the xhr object, or `false` if the model [isNew](#ampersand-model-isnew). Accepts `success` and `error` callbacks in the options hash, which are both passed `(model, response, options)` as arguments.
+Destroys the model on the server by delegating a HTTP `DELETE` request to ampersand-sync. Returns the xhr object, or `false` if the model [isNew](#ampersand-state-isnew). Accepts `success` and `error` callbacks in the options hash, which are both passed `(model, response, options)` as arguments.
 
 Triggers:
 
