@@ -47,6 +47,11 @@
     "publish-minor": "npm run preversion && npm version minor && git push origin master --tags && npm publish",
     "publish-major": "npm run preversion && npm version major && git push origin master --tags && npm publish"
   },
+  "browserify": {
+    "transform": [
+      "ampersand-version"
+    ]
+  },
   "pre-commit": [
     "lint",
     "validate",
