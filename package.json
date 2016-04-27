@@ -13,14 +13,10 @@
     "ampersand-state": "^4.6.0",
     "ampersand-sync": "^4.0.3",
     "ampersand-version": "^1.0.2",
-    "lodash.assign": "^3.2.0",
-    "lodash.clone": "^3.0.3",
-    "lodash.isobject": "^3.0.2",
-    "lodash.result": "^3.1.2"
+    "lodash": "^4.11.1"
   },
   "devDependencies": {
     "jshint": "^2.9.1",
-    "lodash": "^3.6.0",
     "phantomjs": "^1.9.13",
     "precommit-hook": "*",
     "tape": "^3.0.3",

@@ -1,10 +1,10 @@
 /*$AMPERSAND_VERSION*/
 var State = require('ampersand-state');
 var sync = require('ampersand-sync');
-var assign = require('lodash.assign');
-var isObject = require('lodash.isobject');
-var clone = require('lodash.clone');
-var result = require('lodash.result');
+var assign = require('lodash/assign');
+var isObject = require('lodash/isObject');
+var clone = require('lodash/clone');
+var result = require('lodash/result');
 
 // Throw an error when a URL is needed, and none is supplied.
 var urlError = function () {
