@@ -10,7 +10,7 @@
     "url": "https://github.com/ampersandjs/ampersand-model/issues"
   },
   "dependencies": {
-    "ampersand-state": "^4.6.0",
+    "ampersand-state": "^5.0.1",
     "ampersand-sync": "^4.0.3",
     "ampersand-version": "^1.0.2",
     "lodash": "^4.11.1"
