@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "ampersand-state": "^5.0.1",
-    "ampersand-sync": "^4.0.3",
+    "ampersand-sync": "^5.0.0",
     "ampersand-version": "^1.0.2",
     "lodash": "^4.11.1"
   },
