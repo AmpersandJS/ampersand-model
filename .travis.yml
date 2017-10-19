@@ -8,7 +8,7 @@ branches:
   except: /^v\d+\.\d+\.\d+$/
 notifications:
   webhooks:
-    urls: https://webhooks.gitter.im/e/df4440290bd89d941fb4
+    urls: 'https://webhooks.gitter.im/e/df4440290bd89d941fb4'
     on_success: change
     on_failure: always
     on_start: false
@@ -18,5 +18,7 @@ addons:
   sauce_connect: true
 env:
   global:
-  - secure: ValPUj0hjT5AS98hnu92S3NfOdwabrPwsPg+6R3N2O2RkE3koIgVtkATiHyv0pe8ouicjaRtCZcNem4bd2243QSP0XASZ3lBJUkT7ibkX+GAax+c8/f+lS802EcyRKscRe5ExBoFUh0S729u3+yHfwoByzC6UoVn7yn79UpePI8=
-  - secure: MvTg5LxJz3nH7oBoFzt5c0J3T8+BICtqpzUD6QTJwsHAOpI2iN+8dXNsvyvSEpVNskabPkmVBaFMRvpMNfbKZ47+eA/i5xi3jEq0llfDkJV8P+M3uIfZGLgJPPsZ0WG47Yq0cXk7tMv3ITXmakLqVvahKND3NoiIa1AuPzBX9RQ=
+    - secure: >-
+        Z22Le+0Skd9yP69/Kxd4nnaKVKDaFuNo84Qp5dxb3TWP7dB3N0572CNBqM712frKX4MczoeQOFqeaYKkzs4xpgXaUVU4B8PUcRVelzCdQJB7ttzf1ScZfWfVVzcuC/jrNgY6PIWLu0M+r4NDBdiHo0BjnUMYd2zv0WdiQc8ARm8=
+    - secure: >-
+        Ms4JJ5DMgieIgzjain5zlrw5x1AydE2sVeCgwhx/sY4wQgh8Jtlgy2ZSwuqF1tYhpd3T9yEM499TvQpp2rjevs9unzImopSScye9nDeUqkeHl+4t2FMpYwSI1o7VMAG5gnba5JO3zJxox4/6ikitDq8Ci8wKt5qZAHk4cUErKeU=
