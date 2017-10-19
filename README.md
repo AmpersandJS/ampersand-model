@@ -88,7 +88,7 @@ If you only want the changed attributes to be sent to the server, call `model.sa
 Calling save with new attributes will cause a `"change"` event immediately, a `"request"` event as the Ajax request begins to go to the server, and a `"sync"` event after the server has acknowledged the successful change. Pass `{wait: true}` if you'd like to wait for the server before setting the new attributes on the model.
 
 ```javascript
-var book = new Backbone.Model({
+var book = new AmpersandModel({
   title: "The Rough Riders",
   author: "Theodore Roosevelt"
 });
